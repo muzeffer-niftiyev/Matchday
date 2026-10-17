@@ -1,0 +1,20 @@
+@url = http://localhost:5289
+
+### Get all teams
+GET {{url}}/teams
+
+### Create a team
+POST {{url}}/teams
+Content-Type: application/json
+
+{"name": "Qarabag", "city": "Baku"}
+
+###
+POST http://localhost:5289/auth/register
+Content-Type: application/json
+
+{
+  "email": "muzu@gmail.com ",
+  "displayName": "muzu 2",
+  "password": "whatever123"
+}
