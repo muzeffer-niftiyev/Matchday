@@ -55,17 +55,11 @@ public static class MatchEndpoints
 
             var now = DateTime.UtcNow;
 
-            if (dto.PlayerIds.Distinct().Count() != TeamRules.PlayersPerMatch)
-            {
-                return Results.BadRequest("The lineup must have 8 different players.");
-            }
+            var lineupError = await LineupRules.ValidateAsync(db, dto.HomeTeamId, dto.PlayerIds);
 
-            var membersInLineup = await db.TeamMembers
-            .CountAsync(m => m.TeamId == dto.HomeTeamId && dto.PlayerIds.Contains(m.UserId));
-
-            if (membersInLineup != TeamRules.PlayersPerMatch)
+            if (lineupError is not null)
             {
-                return Results.BadRequest("All players must be members of your team.");
+                return Results.BadRequest(lineupError);
             }
 
             var hasPendingInvite = await db.Matches
@@ -130,6 +124,165 @@ public static class MatchEndpoints
             }
 
             return Results.Created($"/matches/{match.Id}", new MatchDto(
+                match.Id, match.FieldId, match.Date, match.StartTime,
+                match.HomeTeamId, match.AwayTeamId, match.Status.ToString(), match.ExpiresAt));
+        }).RequireAuthorization();
+
+        group.MapPost("/{id:int}/accept", async (int id, AcceptMatchDto dto, MatchdayContext db, ClaimsPrincipal user) =>
+        {
+            var userId = int.Parse(user.FindFirstValue("sub")!);
+            var now = DateTime.UtcNow;
+            var match = await db.Matches.FirstOrDefaultAsync(m => m.Id == id);
+
+            if(match is null)
+            {
+                return Results.NotFound("Match not found.");
+            }
+
+            var awayTeam = await db.Teams.FirstAsync(t => t.Id == match.AwayTeamId);
+
+            if(awayTeam.OwnerId != userId)
+            {
+                return Results.Forbid();
+            }
+
+            if(match.Status != MatchStatus.Pending)
+            {
+                return Results.BadRequest("This match is not waiting for an answer.");
+            }
+
+            if(match.ExpiresAt <= now)
+            {
+                match.Status = MatchStatus.Expired;
+                await db.SaveChangesAsync();
+                return Results.BadRequest("This invitation has expired.");
+            }
+
+            var lineupError = await LineupRules.ValidateAsync(db, match.AwayTeamId, dto.PlayerIds);
+
+            if (lineupError is not null)
+            {
+                return Results.BadRequest(lineupError);
+            }
+
+            var playsForHome = await db.MatchPlayers
+                .AnyAsync(mp => mp.MatchId == match.Id && dto.PlayerIds.Contains(mp.UserId));
+
+            if (playsForHome)
+            {
+                return Results.BadRequest("A player can't play for both teams.");
+            }
+
+            var teamBusy = await db.Matches
+                .Active(now)
+                .AnyAsync(m => m.Id != match.Id
+                            && m.Date == match.Date
+                            && (m.HomeTeamId == match.HomeTeamId || m.AwayTeamId == match.HomeTeamId
+                             || m.HomeTeamId == match.AwayTeamId || m.AwayTeamId == match.AwayTeamId));
+
+            if (teamBusy)
+            {
+                return Results.Conflict("One of the teams already has a game on this day.");
+            }
+
+            match.Status = MatchStatus.Confirmed;
+
+            foreach (var playerId in dto.PlayerIds)
+            {
+                db.MatchPlayers.Add(new MatchPlayer
+                {
+                    MatchId = match.Id,
+                    UserId = playerId,
+                    TeamId = match.AwayTeamId
+                });
+            }
+
+            try
+            {
+                await db.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                return Results.Conflict("This match could not be confirmed. Please try again.");
+            }
+
+            return Results.Ok(new MatchDto(
+                match.Id, match.FieldId, match.Date, match.StartTime,
+                match.HomeTeamId, match.AwayTeamId, match.Status.ToString(), match.ExpiresAt));
+
+        }).RequireAuthorization();
+
+        group.MapPost("/{id:int}/decline", async (int id, MatchdayContext db, ClaimsPrincipal user) =>
+        {
+            var userId = int.Parse(user.FindFirstValue("sub")!);
+            var now = DateTime.UtcNow;
+            var match = await db.Matches.FirstOrDefaultAsync(m => m.Id == id);
+
+            if (match is null)
+            {
+                return Results.NotFound("Match not found.");
+            }
+
+            var awayTeam = await db.Teams.FirstAsync(t => t.Id == match.AwayTeamId);
+
+            if (awayTeam.OwnerId != userId)
+            {
+                return Results.Forbid();
+            }
+
+            if (match.Status != MatchStatus.Pending)
+            {
+                return Results.BadRequest("This match is not waiting for an answer.");
+            }
+
+            if (match.ExpiresAt <= now)
+            {
+                match.Status = MatchStatus.Expired;
+                await db.SaveChangesAsync();
+                return Results.BadRequest("This invitation has expired.");
+            }
+
+            match.Status = MatchStatus.Declined;
+            await db.SaveChangesAsync();
+
+            return Results.Ok(new MatchDto(
+                match.Id, match.FieldId, match.Date, match.StartTime,
+                match.HomeTeamId, match.AwayTeamId, match.Status.ToString(), match.ExpiresAt));
+        }).RequireAuthorization();
+
+        group.MapPost("/{id:int}/cancel", async (int id, MatchdayContext db, ClaimsPrincipal user) =>
+        {
+            var userId = int.Parse(user.FindFirstValue("sub")!);
+            var match = await db.Matches.FirstOrDefaultAsync(m => m.Id == id);
+
+            if (match is null)
+            {
+                return Results.NotFound("Match not found.");
+            }
+
+            var homeTeam = await db.Teams.FirstAsync(t => t.Id == match.HomeTeamId);
+
+            if (homeTeam.OwnerId != userId)
+            {
+                return Results.Forbid();
+            }
+
+            if (match.Status != MatchStatus.Pending && match.Status != MatchStatus.Confirmed)
+            {
+                return Results.BadRequest("Only pending or confirmed matches can be cancelled.");
+            }
+
+            var matchStart = match.Date.ToDateTime(match.StartTime);
+
+            if (matchStart <= BakuTime.Now)
+            {
+                return Results.BadRequest("You can't cancel a match that has already started.");
+            }
+
+            match.Status = MatchStatus.Cancelled;
+            await db.SaveChangesAsync();
+
+            return Results.Ok(new MatchDto(
                 match.Id, match.FieldId, match.Date, match.StartTime,
                 match.HomeTeamId, match.AwayTeamId, match.Status.ToString(), match.ExpiresAt));
         }).RequireAuthorization();
