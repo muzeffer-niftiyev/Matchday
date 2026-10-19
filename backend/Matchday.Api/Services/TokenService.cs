@@ -18,7 +18,8 @@ public class TokenService(IConfiguration config)
             [
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email),
-                new Claim(JwtRegisteredClaimNames.Name, user.DisplayName)
+                new Claim(JwtRegisteredClaimNames.Name, user.DisplayName),
+                new Claim("role", user.Role.ToString())
             ]),
             Issuer = config["Jwt:Issuer"],
             Audience = config["Jwt:Audience"],

@@ -7,4 +7,5 @@ public class User
     public required string DisplayName { set; get; }
     public required string PasswordHash { set; get; }
     public DateTime CreatedAt { set; get; }
+    public UserRole Role { set; get; }
 }

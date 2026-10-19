@@ -33,3 +33,15 @@ GET {{baseUrl}}/teams/{{createTeam.response.body.id}}/members
 
 ### 6. Members of a team that doesn't exist -> 404
 GET {{baseUrl}}/teams/999/members
+
+
+###
+### Register the admin account
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "muzeffer.niftiyev@gmail.com",
+  "displayName": "Admin",
+  "password": "muzeffer0309"
+}

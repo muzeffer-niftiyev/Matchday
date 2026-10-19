@@ -9,6 +9,8 @@ public class MatchdayContext(DbContextOptions<MatchdayContext> options) : DbCont
     public DbSet<User> Users => Set<User>();
     public DbSet<TeamMember> TeamMembers => Set<TeamMember>();
     public DbSet<Field> Fields => Set<Field>();
+    public DbSet<Match> Matches => Set<Match>();
+    public DbSet<MatchPlayer> MatchPlayers => Set<MatchPlayer>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -26,5 +28,13 @@ public class MatchdayContext(DbContextOptions<MatchdayContext> options) : DbCont
         modelBuilder.Entity<Field>()
             .Property(f => f.PricePerHour)
             .HasPrecision(8, 2);
+
+        modelBuilder.Entity<Match>()
+            .HasIndex(m => new { m.FieldId, m.Date, m.StartTime })
+            .IsUnique()
+            .HasFilter("\"Status\" IN (0, 1)");
+
+        modelBuilder.Entity<MatchPlayer>()
+            .HasKey(mp => new { mp.MatchId, mp.UserId });
     }
 }

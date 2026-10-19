@@ -75,7 +75,8 @@ public static class AuthEndpoints
             {
                 Id = user.FindFirstValue("sub"),
                 Email = user.FindFirstValue("email"),
-                Name = user.FindFirstValue("name")
+                Name = user.FindFirstValue("name"),
+                Role = user.FindFirstValue("role")
             });
         }).RequireAuthorization();
     }
