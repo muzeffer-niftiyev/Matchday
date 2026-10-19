@@ -50,5 +50,6 @@ app.UseAuthorization();
 
 app.MapTeamEndpoints();
 app.MapAuthEndpoints();
+app.MapFieldEndpoints();
 
 app.Run();
