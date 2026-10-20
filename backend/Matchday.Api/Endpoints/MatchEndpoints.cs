@@ -123,9 +123,7 @@ public static class MatchEndpoints
                 return Results.Conflict("This slot was just taken by someone else.");
             }
 
-            return Results.Created($"/matches/{match.Id}", new MatchDto(
-                match.Id, match.FieldId, match.Date, match.StartTime,
-                match.HomeTeamId, match.AwayTeamId, match.Status.ToString(), match.ExpiresAt));
+            return Results.Created($"/matches/{match.Id}", MatchDto.From(match));
         }).RequireAuthorization();
 
         group.MapPost("/{id:int}/accept", async (int id, AcceptMatchDto dto, MatchdayContext db, ClaimsPrincipal user) =>
@@ -134,24 +132,24 @@ public static class MatchEndpoints
             var now = DateTime.UtcNow;
             var match = await db.Matches.FirstOrDefaultAsync(m => m.Id == id);
 
-            if(match is null)
+            if (match is null)
             {
                 return Results.NotFound("Match not found.");
             }
 
             var awayTeam = await db.Teams.FirstAsync(t => t.Id == match.AwayTeamId);
 
-            if(awayTeam.OwnerId != userId)
+            if (awayTeam.OwnerId != userId)
             {
                 return Results.Forbid();
             }
 
-            if(match.Status != MatchStatus.Pending)
+            if (match.Status != MatchStatus.Pending)
             {
                 return Results.BadRequest("This match is not waiting for an answer.");
             }
 
-            if(match.ExpiresAt <= now)
+            if (match.ExpiresAt <= now)
             {
                 match.Status = MatchStatus.Expired;
                 await db.SaveChangesAsync();
@@ -206,9 +204,7 @@ public static class MatchEndpoints
                 return Results.Conflict("This match could not be confirmed. Please try again.");
             }
 
-            return Results.Ok(new MatchDto(
-                match.Id, match.FieldId, match.Date, match.StartTime,
-                match.HomeTeamId, match.AwayTeamId, match.Status.ToString(), match.ExpiresAt));
+            return Results.Ok(MatchDto.From(match));
 
         }).RequireAuthorization();
 
@@ -245,9 +241,7 @@ public static class MatchEndpoints
             match.Status = MatchStatus.Declined;
             await db.SaveChangesAsync();
 
-            return Results.Ok(new MatchDto(
-                match.Id, match.FieldId, match.Date, match.StartTime,
-                match.HomeTeamId, match.AwayTeamId, match.Status.ToString(), match.ExpiresAt));
+            return Results.Ok(MatchDto.From(match));
         }).RequireAuthorization();
 
         group.MapPost("/{id:int}/cancel", async (int id, MatchdayContext db, ClaimsPrincipal user) =>
@@ -282,9 +276,37 @@ public static class MatchEndpoints
             match.Status = MatchStatus.Cancelled;
             await db.SaveChangesAsync();
 
-            return Results.Ok(new MatchDto(
-                match.Id, match.FieldId, match.Date, match.StartTime,
-                match.HomeTeamId, match.AwayTeamId, match.Status.ToString(), match.ExpiresAt));
+            return Results.Ok(MatchDto.From(match));
         }).RequireAuthorization();
+
+        group.MapPost("/{id:int}/score", async (int id, SetScoreDto dto, MatchdayContext db) =>
+        {
+            var match = await db.Matches.FirstOrDefaultAsync(m => m.Id == id);
+
+            if (match is null)
+            {
+                return Results.NotFound("Match not found.");
+            }
+
+            if (match.Status != MatchStatus.Confirmed && match.Status != MatchStatus.Completed)
+            {
+                return Results.BadRequest("Only confirmed matches can get a score.");
+            }
+
+            var matchEnd = match.Date.ToDateTime(match.StartTime).Add(BookingSlots.Duration);
+
+            if (matchEnd > BakuTime.Now)
+            {
+                return Results.BadRequest("The match hasn't finished yet.");
+            }
+
+            match.HomeScore = dto.HomeScore;
+            match.AwayScore = dto.AwayScore;
+            match.Status = MatchStatus.Completed;
+
+            await db.SaveChangesAsync();
+            return Results.Ok(MatchDto.From(match));
+
+        }).RequireAuthorization("Admin");
     }
 }

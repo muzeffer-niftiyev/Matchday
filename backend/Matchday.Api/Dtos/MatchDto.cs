@@ -1,3 +1,5 @@
+using Matchday.Api.Models;
+
 namespace Matchday.Api.Dtos;
 
 public record MatchDto(
@@ -8,5 +10,13 @@ public record MatchDto(
     int HomeTeamId,
     int AwayTeamId,
     string Status,
-    DateTime ExpiresAt
-);
+    DateTime ExpiresAt,
+    int? HomeScore,
+    int? AwayScore
+)
+{
+    public static MatchDto From(Match m) => new(
+        m.Id, m.FieldId, m.Date, m.StartTime,
+        m.HomeTeamId, m.AwayTeamId, m.Status.ToString(), m.ExpiresAt,
+        m.HomeScore, m.AwayScore);
+}
