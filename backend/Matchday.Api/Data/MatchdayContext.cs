@@ -11,6 +11,7 @@ public class MatchdayContext(DbContextOptions<MatchdayContext> options) : DbCont
     public DbSet<Field> Fields => Set<Field>();
     public DbSet<Match> Matches => Set<Match>();
     public DbSet<MatchPlayer> MatchPlayers => Set<MatchPlayer>();
+    public DbSet<JoinRequest> JoinRequests => Set<JoinRequest>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -24,6 +25,14 @@ public class MatchdayContext(DbContextOptions<MatchdayContext> options) : DbCont
 
         modelBuilder.Entity<TeamMember>()
             .HasKey(m => new { m.TeamId, m.UserId });
+
+        // One team per player: the database refuses a second membership for the same user.
+        modelBuilder.Entity<TeamMember>()
+            .HasIndex(m => m.UserId)
+            .IsUnique();
+
+        modelBuilder.Entity<JoinRequest>()
+            .HasKey(r => new { r.TeamId, r.UserId });
 
         modelBuilder.Entity<Field>()
             .Property(f => f.PricePerHour)

@@ -308,5 +308,48 @@ public static class MatchEndpoints
             return Results.Ok(MatchDto.From(match));
 
         }).RequireAuthorization("Admin");
+
+        group.MapGet("/{id:int}", async (int id, MatchdayContext db) =>
+        {
+            var match = await db.Matches
+                .Include(m => m.Field)
+                .Include(m => m.HomeTeam)
+                .Include(m => m.AwayTeam)
+                .FirstOrDefaultAsync(m => m.Id == id);
+
+            if (match is null)
+            {
+                return Results.NotFound("Match not found.");
+            }
+
+            var players = await db.MatchPlayers
+                .Where(mp => mp.MatchId == id)
+                .Select(mp => new { mp.TeamId, Player = new LineupPlayerDto(mp.UserId, mp.User!.DisplayName) })
+                .ToListAsync();
+
+            var homeLineup = players.Where(p => p.TeamId == match.HomeTeamId).Select(p => p.Player).ToList();
+            var awayLineup = players.Where(p => p.TeamId == match.AwayTeamId).Select(p => p.Player).ToList();
+
+            var status = match.Status == MatchStatus.Pending && match.ExpiresAt <= DateTime.UtcNow
+                ? MatchStatus.Expired
+                : match.Status;
+
+            return Results.Ok(new MatchDetailsDto(
+                match.Id,
+                match.Date,
+                match.StartTime,
+                match.StartTime.Add(BookingSlots.Duration),
+                status,
+                match.Field!.Name,
+                match.Field.City,
+                match.HomeTeamId,
+                match.HomeTeam!.Name,
+                match.AwayTeamId,
+                match.AwayTeam!.Name,
+                match.HomeScore,
+                match.AwayScore,
+                homeLineup,
+                awayLineup));
+        });
     }
 }

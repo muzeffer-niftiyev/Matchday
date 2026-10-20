@@ -35,8 +35,16 @@ public static class TeamEndpoints
 
         group.MapPost("/", async (CreateTeamDto dto, MatchdayContext db, ClaimsPrincipal user) =>
         {
-            var nameTaken = await db.Teams.AnyAsync(t => t.Name == dto.Name);
             var userId = int.Parse(user.FindFirstValue("sub")!);
+
+            var alreadyInTeam = await db.TeamMembers.AnyAsync(m => m.UserId == userId);
+
+            if (alreadyInTeam)
+            {
+                return Results.Conflict("You're already in a team. Leave it first to create a new one.");
+            }
+
+            var nameTaken = await db.Teams.AnyAsync(t => t.Name == dto.Name);
 
             if (nameTaken)
             {
@@ -69,7 +77,7 @@ public static class TeamEndpoints
             }
             catch (DbUpdateException)
             {
-                return Results.Conflict("A team with this name already exists.");
+                return Results.Conflict("The team could not be created. The name may be taken, or you're already in a team.");
             }
 
             return Results.Created($"/teams/{team.Id}", new TeamDto(team.Id, team.Name, team.City, team.CreatedAt));
@@ -253,6 +261,97 @@ public static class TeamEndpoints
 
             return Results.NoContent();
 
+        }).RequireAuthorization();
+
+        group.MapPost("/{id:int}/join-requests", async (int id, MatchdayContext db, ClaimsPrincipal user) =>
+        {
+            var userId = int.Parse(user.FindFirstValue("sub")!);
+            var teamExists = await db.Teams.AnyAsync(t => t.Id == id);
+
+            if (!teamExists)
+            {
+                return Results.NotFound("Team not found.");
+            }
+
+            var isMember = await db.TeamMembers.AnyAsync(m => m.UserId == userId);
+
+            if (isMember)
+            {
+                return Results.Conflict("You're already in a team.");
+            }
+
+            var hasRequested = await db.JoinRequests.AnyAsync(r => r.UserId == userId && r.TeamId == id);
+
+            if (hasRequested)
+            {
+                return Results.Conflict("You already requested to join this team.");
+            }
+
+            var isTeamFull = await db.TeamMembers.CountAsync(m => m.TeamId == id) >= TeamRules.MaxSquadSize;
+
+            if (isTeamFull)
+            {
+                return Results.Conflict("The team is full.");
+            }
+
+            var joinRequest = new JoinRequest
+            {
+                TeamId = id,
+                UserId = userId,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            try
+            {
+                db.JoinRequests.Add(joinRequest);
+                await db.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                return Results.Conflict("Request couldn't send.");
+            }
+
+            return Results.NoContent();
+        }).RequireAuthorization();
+
+        group.MapDelete("/{id:int}/join-requests", async (int id, MatchdayContext db, ClaimsPrincipal user) =>
+        {
+            var userId = int.Parse(user.FindFirstValue("sub")!);
+            var request = await db.JoinRequests.FirstOrDefaultAsync(r => r.TeamId == id && r.UserId == userId);
+
+            if (request is null)
+            {
+                return Results.NotFound("You have no request for this team.");
+            }
+
+            db.JoinRequests.Remove(request);
+            await db.SaveChangesAsync();
+
+            return Results.NoContent();
+        }).RequireAuthorization();
+
+        group.MapGet("/{id:int}/join-requests", async (int id, MatchdayContext db, ClaimsPrincipal user) =>
+        {
+            var userId = int.Parse(user.FindFirstValue("sub")!);
+            var team = await db.Teams.FirstOrDefaultAsync(t => t.Id == id);
+
+            if (team is null)
+            {
+                return Results.NotFound("Team not found.");
+            }
+
+            if (team.OwnerId != userId)
+            {
+                return Results.Forbid();
+            }
+
+            var requests = await db.JoinRequests
+            .Where(r => r.TeamId == id)
+            .OrderBy(r => r.CreatedAt)
+            .Select(r => new JoinRequestDto(r.UserId, r.User!.DisplayName, r.CreatedAt))
+            .ToListAsync();
+
+            return Results.Ok(requests);
         }).RequireAuthorization();
     }
 }

@@ -59,5 +59,6 @@ app.MapTeamEndpoints();
 app.MapAuthEndpoints();
 app.MapFieldEndpoints();
 app.MapMatchEndpoints();
+app.MapMeEndpoints();
 
 app.Run();

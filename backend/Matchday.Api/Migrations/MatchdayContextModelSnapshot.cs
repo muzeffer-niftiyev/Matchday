@@ -50,6 +50,24 @@ namespace Matchday.Api.Migrations
                     b.ToTable("Fields");
                 });
 
+            modelBuilder.Entity("Matchday.Api.Models.JoinRequest", b =>
+                {
+                    b.Property<int>("TeamId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("TeamId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("JoinRequests");
+                });
+
             modelBuilder.Entity("Matchday.Api.Models.Match", b =>
                 {
                     b.Property<int>("Id")
@@ -169,7 +187,8 @@ namespace Matchday.Api.Migrations
 
                     b.HasKey("TeamId", "UserId");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId")
+                        .IsUnique();
 
                     b.ToTable("TeamMembers");
                 });
@@ -206,6 +225,25 @@ namespace Matchday.Api.Migrations
                         .IsUnique();
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("Matchday.Api.Models.JoinRequest", b =>
+                {
+                    b.HasOne("Matchday.Api.Models.Team", "Team")
+                        .WithMany()
+                        .HasForeignKey("TeamId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Matchday.Api.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Team");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Matchday.Api.Models.Match", b =>
