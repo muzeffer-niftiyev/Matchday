@@ -16,6 +16,16 @@ builder.Services.AddDbContext<MatchdayContext>(options => options.UseNpgsql(conn
 
 builder.Services.AddOpenApi();
 builder.Services.AddValidation();
+
+// Error responses in Azerbaijani: replace ASP.NET's default English title for validation errors.
+builder.Services.AddProblemDetails(options =>
+    options.CustomizeProblemDetails = context =>
+    {
+        if (context.ProblemDetails is HttpValidationProblemDetails)
+        {
+            context.ProblemDetails.Title = "Göndərilən məlumatlarda xəta var.";
+        }
+    });
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<TokenService>();
 

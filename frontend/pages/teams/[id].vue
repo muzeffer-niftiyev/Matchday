@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { matchStart } from '~/stores/data'
-import { PLAYERS_PER_MATCH } from '~/utils/rules'
+import { MAX_SQUAD_SIZE, PLAYERS_PER_MATCH } from '~/utils/rules'
 
 const route = useRoute()
 const router = useRouter()
@@ -19,6 +19,15 @@ const members = computed(() => data.teamMembers(teamId.value).map(m => ({ ...m, 
 const isOwner = computed(() => team.value?.ownerId === auth.userId)
 const isMember = computed(() => auth.userId !== null && data.isMember(teamId.value, auth.userId))
 const canPlay = computed(() => members.value.length >= PLAYERS_PER_MATCH)
+const isFull = computed(() => members.value.length >= MAX_SQUAD_SIZE)
+
+// One team per player: if I'm already in another team, I can't ask to join this one.
+const myOtherTeam = computed(() => {
+  if (!auth.userId || isMember.value) return undefined
+  return data.teamOfUser(auth.userId)
+})
+const hasRequested = computed(() => auth.userId !== null && data.hasRequested(teamId.value, auth.userId))
+const requests = computed(() => (isOwner.value ? data.requestsOfTeam(teamId.value) : []))
 
 const matches = computed(() => data.matchesOfTeam(teamId.value))
 const upcoming = computed(() => matches.value.filter(m => data.isActive(m) && matchStart(m) > new Date()).reverse())
@@ -27,6 +36,7 @@ const past = computed(() => matches.value.filter(m => m.status === 'Completed'))
 const tab = ref('squad')
 const tabs = computed(() => [
   { value: 'squad', label: t('teams.squad'), count: members.value.length },
+  ...(isOwner.value ? [{ value: 'requests', label: t('teams.requests'), count: requests.value.length }] : []),
   { value: 'upcoming', label: t('teams.upcoming'), count: upcoming.value.length },
   { value: 'results', label: t('teams.results'), count: past.value.length },
 ])
@@ -43,9 +53,13 @@ const deleteOpen = ref(false)
 const kickTarget = ref<{ userId: number; name: string } | null>(null)
 const kickOpen = computed({ get: () => !!kickTarget.value, set: v => !v && (kickTarget.value = null) })
 
-function join() {
+function requestToJoin() {
   if (!auth.isLoggedIn) return router.push(`/login?redirect=${route.fullPath}`)
-  notify.result(data.joinTeam(teamId.value, auth.userId!), 'teams.joined', { name: team.value?.name })
+  notify.result(data.requestToJoin(teamId.value, auth.userId!), 'teams.requestSent', { name: team.value?.name })
+}
+
+function cancelRequest() {
+  notify.result(data.cancelRequest(teamId.value, auth.userId!), 'teams.requestCancelled')
 }
 
 function leave() {
@@ -90,7 +104,7 @@ function kick() {
               <h1 class="text-2xl font-bold text-ink-900 sm:text-3xl">{{ team.name }}</h1>
               <p class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-500">
                 <span class="inline-flex items-center gap-1"><SvgoPin class="text-sm" /> {{ team.city }}</span>
-                <span class="inline-flex items-center gap-1"><SvgoUsers class="text-sm" /> {{ $t('teams.playersCount', { n: members.length }) }}</span>
+                <span class="inline-flex items-center gap-1"><SvgoUsers class="text-sm" /> {{ $t('teams.squadSize', { n: members.length, max: MAX_SQUAD_SIZE }) }}</span>
                 <span>{{ $t('teams.founded', { time: relative(team.createdAt) }) }}</span>
               </p>
             </div>
@@ -103,11 +117,24 @@ function kick() {
               <UiButton variant="ghost" class="!text-rose-600 hover:!bg-rose-50" @click="deleteOpen = true"><SvgoTrash class="text-base" /></UiButton>
             </template>
             <UiButton v-else-if="isMember" variant="secondary" @click="leave">{{ $t('teams.leave') }}</UiButton>
-            <UiButton v-else @click="join"><SvgoPlus class="text-base" /> {{ $t('teams.join') }}</UiButton>
+            <template v-else-if="hasRequested">
+              <span class="chip h-11 bg-amber-50 px-4 text-sm text-amber-700"><SvgoClock class="text-base" /> {{ $t('teams.requested') }}</span>
+              <UiButton variant="ghost" @click="cancelRequest">{{ $t('teams.cancelRequest') }}</UiButton>
+            </template>
+            <UiButton v-else-if="myOtherTeam" variant="secondary" disabled>{{ $t('teams.inAnotherTeam') }}</UiButton>
+            <UiButton v-else-if="isFull" variant="secondary" disabled>{{ $t('teams.full') }}</UiButton>
+            <UiButton v-else @click="requestToJoin"><SvgoSend class="text-base" /> {{ $t('teams.requestJoin') }}</UiButton>
           </div>
         </div>
         <p v-if="isOwner && !canPlay" class="relative mt-5 rounded-xl bg-amber-50 px-4 py-2.5 text-sm text-amber-700">
           {{ $t('teams.needPlayers', { n: PLAYERS_PER_MATCH, have: members.length }) }}
+        </p>
+        <p v-else-if="myOtherTeam" class="relative mt-5 rounded-xl bg-ink-50 px-4 py-2.5 text-sm text-ink-600">
+          {{ $t('teams.oneTeamNote') }}
+          <NuxtLink :to="`/teams/${myOtherTeam.id}`" class="font-semibold text-brand-600 hover:text-brand-700">{{ myOtherTeam.name }}</NuxtLink>
+        </p>
+        <p v-else-if="hasRequested" class="relative mt-5 rounded-xl bg-amber-50/70 px-4 py-2.5 text-sm text-amber-700">
+          {{ $t('teams.requestedNote') }}
         </p>
       </section>
 
@@ -135,6 +162,17 @@ function kick() {
             <SvgoX class="text-base" />
           </button>
         </div>
+      </div>
+
+      <!-- Join requests (owner only) -->
+      <div v-else-if="tab === 'requests'">
+        <div v-if="requests.length" class="card divide-y divide-ink-100">
+          <JoinRequestRow v-for="r in requests" :key="r.userId" :request="r" />
+        </div>
+        <UiEmptyState v-else :title="$t('teams.requestsEmpty')" :text="$t('teams.requestsEmptyText')">
+          <template #icon><SvgoInbox class="text-2xl" /></template>
+        </UiEmptyState>
+        <p v-if="isFull" class="mt-4 rounded-xl bg-amber-50 px-4 py-2.5 text-sm text-amber-700">{{ $t('teams.fullNote', { max: MAX_SQUAD_SIZE }) }}</p>
       </div>
 
       <!-- Upcoming -->

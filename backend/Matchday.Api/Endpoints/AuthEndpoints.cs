@@ -21,7 +21,7 @@ public static class AuthEndpoints
 
             if (emailTaken)
             {
-                return Results.Conflict("This email is already registered.");
+                return Results.Conflict("Bu e-poçt artıq qeydiyyatdan keçib.");
             }
 
             var user = new User
@@ -41,7 +41,7 @@ public static class AuthEndpoints
             }
             catch (DbUpdateException)
             {
-                return Results.Conflict("This email is already registered.");
+                return Results.Conflict("Bu e-poçt artıq qeydiyyatdan keçib.");
             }
 
             return Results.Created($"/users/{user.Id}", new UserDto(user.Id, user.Email, user.DisplayName, user.CreatedAt));

@@ -11,16 +11,12 @@ useHead({ title: () => t('nav.teams') })
 const search = ref('')
 const debounced = refDebounced(search, 200)
 const city = ref('')
-const tab = ref('all')
 
-const tabs = computed(() => [
-  { value: 'all', label: t('teams.allTeams') },
-  ...(auth.isLoggedIn ? [{ value: 'mine', label: t('teams.myTeams'), count: data.teamsOfUser(auth.userId!).length }] : []),
-])
+// One team per player: show a shortcut to it, or offer to create one.
+const myTeam = computed(() => (auth.userId ? data.teamOfUser(auth.userId) : undefined))
 
 const teams = computed(() =>
   data.teams
-    .filter(team => tab.value !== 'mine' || data.isMember(team.id, auth.userId!))
     .filter(team => !city.value || team.city === city.value)
     .filter(team => team.name.toLowerCase().includes(debounced.value.toLowerCase()))
     .sort((a, b) => a.name.localeCompare(b.name)),
@@ -31,13 +27,13 @@ const teams = computed(() =>
   <div class="container-page">
     <PageHeader :title="$t('nav.teams')" :subtitle="$t('teams.subtitle')">
       <template #actions>
-        <UiButton :to="auth.isLoggedIn ? '/teams/new' : '/login?redirect=/teams/new'"><SvgoPlus class="text-lg" /> {{ $t('teams.create') }}</UiButton>
+        <UiButton v-if="myTeam" :to="`/teams/${myTeam.id}`" variant="secondary"><TeamBadge :team="myTeam" size="sm" class="!h-6 !w-6 !rounded-md !text-[9px]" /> {{ $t('teams.myTeam') }}</UiButton>
+        <UiButton v-else :to="auth.isLoggedIn ? '/teams/new' : '/login?redirect=/teams/new'"><SvgoPlus class="text-lg" /> {{ $t('teams.create') }}</UiButton>
       </template>
     </PageHeader>
 
     <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-      <UiTabs v-model="tab" :tabs="tabs" />
-      <div class="flex flex-1 gap-2 sm:justify-end">
+      <div class="flex flex-1 gap-2">
         <div class="relative flex-1 sm:max-w-xs">
           <SvgoSearch class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-ink-400" />
           <input v-model="search" class="input pl-9" :placeholder="$t('teams.search')">

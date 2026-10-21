@@ -55,7 +55,7 @@ const deleteOpen = computed({ get: () => !!deleteTarget.value, set: v => !v && (
 const form = reactive({
   id: undefined as number | undefined,
   name: '',
-  city: 'Baku',
+  city: 'Bakı',
   address: '',
   grassType: 'Artificial' as GrassType,
   pricePerHour: 60,
@@ -73,7 +73,7 @@ const v$ = useVuelidate(rules, form)
 function openField(field?: Field) {
   Object.assign(form, field
     ? { id: field.id, name: field.name, city: field.city, address: field.address, grassType: field.grassType, pricePerHour: field.pricePerHour }
-    : { id: undefined, name: '', city: 'Baku', address: '', grassType: 'Artificial', pricePerHour: 60 })
+    : { id: undefined, name: '', city: 'Bakı', address: '', grassType: 'Artificial', pricePerHour: 60 })
   v$.value.$reset()
   fieldOpen.value = true
 }

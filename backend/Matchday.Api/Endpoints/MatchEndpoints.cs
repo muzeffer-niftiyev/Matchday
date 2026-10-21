@@ -19,19 +19,19 @@ public static class MatchEndpoints
 
             if (dto.Date <= BakuTime.Today)
             {
-                return Results.BadRequest("Date must be tomorrow or later");
+                return Results.BadRequest("Oyunlar ən azı bir gün əvvəl rezerv edilməlidir.");
             }
 
             var startTimeCheck = BookingSlots.StartTimes.Contains(dto.StartTime);
 
             if (!startTimeCheck)
             {
-                return Results.BadRequest("Invalid slot");
+                return Results.BadRequest("Yanlış vaxt.");
             }
 
             if (dto.HomeTeamId == dto.AwayTeamId)
             {
-                return Results.BadRequest("Home and away team can't be the same team");
+                return Results.BadRequest("Komanda özü ilə oynaya bilməz.");
             }
 
             var homeTeam = await db.Teams.FirstOrDefaultAsync(t => t.Id == dto.HomeTeamId);
@@ -40,12 +40,12 @@ public static class MatchEndpoints
 
             if (!field)
             {
-                return Results.NotFound("Field not found.");
+                return Results.NotFound("Meydança tapılmadı.");
             }
 
             if (homeTeam is null || awayTeam is null)
             {
-                return Results.NotFound("Teams not found.");
+                return Results.NotFound("Komandalar tapılmadı.");
             }
 
             if (homeTeam.OwnerId != userId)
@@ -68,7 +68,7 @@ public static class MatchEndpoints
 
             if (hasPendingInvite)
             {
-                return Results.Conflict("You already have a pending invitation. Wait for an answer first.");
+                return Results.Conflict("Artıq gözləyən dəvətiniz var. Əvvəlcə cavabı gözləyin.");
             }
 
             var teamBusy = await db.Matches
@@ -79,7 +79,7 @@ public static class MatchEndpoints
 
             if (teamBusy)
             {
-                return Results.Conflict("One of the teams already has a game on this day.");
+                return Results.Conflict("Komandalardan birinin bu gün artıq oyunu var.");
             }
 
             var slotTaken = await db.Matches
@@ -88,7 +88,7 @@ public static class MatchEndpoints
 
             if (slotTaken)
             {
-                return Results.Conflict("This slot is already taken.");
+                return Results.Conflict("Bu vaxt artıq tutulub.");
             }
 
             var match = new Match
@@ -120,7 +120,7 @@ public static class MatchEndpoints
             }
             catch (DbUpdateException)
             {
-                return Results.Conflict("This slot was just taken by someone else.");
+                return Results.Conflict("Bu vaxt elə indicə başqası tərəfindən tutuldu.");
             }
 
             return Results.Created($"/matches/{match.Id}", MatchDto.From(match));
@@ -134,7 +134,7 @@ public static class MatchEndpoints
 
             if (match is null)
             {
-                return Results.NotFound("Match not found.");
+                return Results.NotFound("Oyun tapılmadı.");
             }
 
             var awayTeam = await db.Teams.FirstAsync(t => t.Id == match.AwayTeamId);
@@ -146,14 +146,14 @@ public static class MatchEndpoints
 
             if (match.Status != MatchStatus.Pending)
             {
-                return Results.BadRequest("This match is not waiting for an answer.");
+                return Results.BadRequest("Bu oyun cavab gözləmir.");
             }
 
             if (match.ExpiresAt <= now)
             {
                 match.Status = MatchStatus.Expired;
                 await db.SaveChangesAsync();
-                return Results.BadRequest("This invitation has expired.");
+                return Results.BadRequest("Bu dəvətin vaxtı bitib.");
             }
 
             var lineupError = await LineupRules.ValidateAsync(db, match.AwayTeamId, dto.PlayerIds);
@@ -168,7 +168,7 @@ public static class MatchEndpoints
 
             if (playsForHome)
             {
-                return Results.BadRequest("A player can't play for both teams.");
+                return Results.BadRequest("Oyunçu hər iki komandada oynaya bilməz.");
             }
 
             var teamBusy = await db.Matches
@@ -180,7 +180,7 @@ public static class MatchEndpoints
 
             if (teamBusy)
             {
-                return Results.Conflict("One of the teams already has a game on this day.");
+                return Results.Conflict("Komandalardan birinin bu gün artıq oyunu var.");
             }
 
             match.Status = MatchStatus.Confirmed;
@@ -201,7 +201,7 @@ public static class MatchEndpoints
             }
             catch (DbUpdateException)
             {
-                return Results.Conflict("This match could not be confirmed. Please try again.");
+                return Results.Conflict("Oyunu təsdiqləmək mümkün olmadı. Yenidən cəhd edin.");
             }
 
             return Results.Ok(MatchDto.From(match));
@@ -216,7 +216,7 @@ public static class MatchEndpoints
 
             if (match is null)
             {
-                return Results.NotFound("Match not found.");
+                return Results.NotFound("Oyun tapılmadı.");
             }
 
             var awayTeam = await db.Teams.FirstAsync(t => t.Id == match.AwayTeamId);
@@ -228,14 +228,14 @@ public static class MatchEndpoints
 
             if (match.Status != MatchStatus.Pending)
             {
-                return Results.BadRequest("This match is not waiting for an answer.");
+                return Results.BadRequest("Bu oyun cavab gözləmir.");
             }
 
             if (match.ExpiresAt <= now)
             {
                 match.Status = MatchStatus.Expired;
                 await db.SaveChangesAsync();
-                return Results.BadRequest("This invitation has expired.");
+                return Results.BadRequest("Bu dəvətin vaxtı bitib.");
             }
 
             match.Status = MatchStatus.Declined;
@@ -251,7 +251,7 @@ public static class MatchEndpoints
 
             if (match is null)
             {
-                return Results.NotFound("Match not found.");
+                return Results.NotFound("Oyun tapılmadı.");
             }
 
             var homeTeam = await db.Teams.FirstAsync(t => t.Id == match.HomeTeamId);
@@ -263,14 +263,14 @@ public static class MatchEndpoints
 
             if (match.Status != MatchStatus.Pending && match.Status != MatchStatus.Confirmed)
             {
-                return Results.BadRequest("Only pending or confirmed matches can be cancelled.");
+                return Results.BadRequest("Yalnız gözləyən və ya təsdiqlənmiş oyunlar ləğv edilə bilər.");
             }
 
             var matchStart = match.Date.ToDateTime(match.StartTime);
 
             if (matchStart <= BakuTime.Now)
             {
-                return Results.BadRequest("You can't cancel a match that has already started.");
+                return Results.BadRequest("Başlamış oyunu ləğv edə bilməzsiniz.");
             }
 
             match.Status = MatchStatus.Cancelled;
@@ -285,19 +285,19 @@ public static class MatchEndpoints
 
             if (match is null)
             {
-                return Results.NotFound("Match not found.");
+                return Results.NotFound("Oyun tapılmadı.");
             }
 
             if (match.Status != MatchStatus.Confirmed && match.Status != MatchStatus.Completed)
             {
-                return Results.BadRequest("Only confirmed matches can get a score.");
+                return Results.BadRequest("Yalnız təsdiqlənmiş oyunlara hesab yazıla bilər.");
             }
 
             var matchEnd = match.Date.ToDateTime(match.StartTime).Add(BookingSlots.Duration);
 
             if (matchEnd > BakuTime.Now)
             {
-                return Results.BadRequest("The match hasn't finished yet.");
+                return Results.BadRequest("Oyun hələ bitməyib.");
             }
 
             match.HomeScore = dto.HomeScore;
@@ -319,7 +319,7 @@ public static class MatchEndpoints
 
             if (match is null)
             {
-                return Results.NotFound("Match not found.");
+                return Results.NotFound("Oyun tapılmadı.");
             }
 
             var players = await db.MatchPlayers
@@ -350,6 +350,65 @@ public static class MatchEndpoints
                 match.AwayScore,
                 homeLineup,
                 awayLineup));
+        });
+
+        group.MapGet("/", async (string? when, int? teamId, string? city, MatchdayContext db) =>
+        {
+            var now = DateTime.UtcNow;
+            var today = BakuTime.Today;
+            var nowTime = TimeOnly.FromDateTime(BakuTime.Now);
+
+            var query = db.Matches.AsQueryable();
+
+            if (city is not null)
+            {
+                query = query.Where(m => m.Field!.City == city);
+            }
+
+            if (teamId is not null)
+            {
+                query = query.Where(m => m.HomeTeamId == teamId || m.AwayTeamId == teamId);
+            }
+
+            if (when == "upcoming")
+            {
+                query = query
+                    .Active(now)
+                    .Where(m => m.Date > today || (m.Date == today && m.StartTime > nowTime))
+                    .OrderBy(m => m.Date)
+                    .ThenBy(m => m.StartTime);
+            }
+            else if (when == "results")
+            {
+                query = query
+                    .Where(m => m.Status == MatchStatus.Completed)
+                    .OrderByDescending(m => m.Date)
+                    .ThenByDescending(m => m.StartTime);
+            }
+            else
+            {
+                query = query
+                    .OrderByDescending(m => m.Date)
+                    .ThenByDescending(m => m.StartTime);
+            }
+
+            var matches = await query
+                .Select(m => new MatchSummaryDto(
+                    m.Id,
+                    m.Date,
+                    m.StartTime,
+                    m.Status,
+                    m.HomeTeamId,
+                    m.HomeTeam!.Name,
+                    m.AwayTeamId,
+                    m.AwayTeam!.Name,
+                    m.HomeScore,
+                    m.AwayScore,
+                    m.Field!.Name,
+                    m.Field.City))
+                .ToListAsync();
+
+            return Results.Ok(matches);
         });
     }
 }

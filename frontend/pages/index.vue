@@ -3,18 +3,16 @@ import { matchStart } from '~/stores/data'
 
 const data = useDataStore()
 const auth = useAuthStore()
-const { received } = useInvitations()
+const { myTeam, attentionCount } = useInvitations()
 const { t } = useI18n()
 
 useHead({ title: () => t('nav.home') })
-
-const myTeamIds = computed(() => (auth.userId ? data.teamsOfUser(auth.userId).map(t => t.id) : []))
 
 const upcoming = computed(() => {
   const now = new Date()
   return data.matches
     .filter(m => data.statusOf(m) === 'Confirmed' && matchStart(m) > now)
-    .filter(m => !auth.isLoggedIn || myTeamIds.value.includes(m.homeTeamId) || myTeamIds.value.includes(m.awayTeamId))
+    .filter(m => !auth.isLoggedIn || m.homeTeamId === myTeam.value?.id || m.awayTeamId === myTeam.value?.id)
     .sort((a, b) => matchStart(a).getTime() - matchStart(b).getTime())
     .slice(0, 4)
 })
@@ -27,9 +25,9 @@ const results = computed(() =>
 )
 
 const stats = computed(() => [
-  { label: 'home.statTeams', value: myTeamIds.value.length, to: '/profile' },
+  { label: 'home.statSquad', value: myTeam.value ? data.teamMembers(myTeam.value.id).length : '—', to: myTeam.value ? `/teams/${myTeam.value.id}` : '/teams' },
   { label: 'home.statUpcoming', value: upcoming.value.length, to: '/matches' },
-  { label: 'home.statInvites', value: received.value.length, to: '/invitations' },
+  { label: 'home.statInvites', value: attentionCount.value, to: '/invitations' },
 ])
 
 const steps = [
@@ -54,7 +52,10 @@ const steps = [
           <UiButton to="/fields" variant="secondary" size="lg" class="!border-transparent">
             <SvgoCalendar class="text-lg" /> {{ $t('home.ctaBook') }}
           </UiButton>
-          <UiButton :to="auth.isLoggedIn ? '/teams/new' : '/register'" size="lg" class="!bg-white/15 !shadow-none backdrop-blur hover:!bg-white/25">
+          <UiButton v-if="myTeam" :to="`/teams/${myTeam.id}`" size="lg" class="!bg-white/15 !shadow-none backdrop-blur hover:!bg-white/25">
+            <SvgoUsers class="text-lg" /> {{ myTeam.name }}
+          </UiButton>
+          <UiButton v-else :to="auth.isLoggedIn ? '/teams/new' : '/register'" size="lg" class="!bg-white/15 !shadow-none backdrop-blur hover:!bg-white/25">
             <SvgoPlus class="text-lg" /> {{ $t('home.ctaTeam') }}
           </UiButton>
         </div>
@@ -71,13 +72,13 @@ const steps = [
 
     <!-- Invitation banner -->
     <NuxtLink
-      v-if="received.length"
+      v-if="attentionCount"
       to="/invitations"
       class="card card-hover flex items-center gap-4 border-amber-200 bg-amber-50/70 p-5"
     >
       <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-600"><SvgoBell class="text-2xl" /></span>
       <div class="flex-1">
-        <p class="font-semibold text-ink-900">{{ $t('home.inviteBannerTitle', { n: received.length }) }}</p>
+        <p class="font-semibold text-ink-900">{{ $t('home.inviteBannerTitle', { n: attentionCount }) }}</p>
         <p class="text-sm text-ink-500">{{ $t('home.inviteBannerText') }}</p>
       </div>
       <SvgoChevronRight class="text-xl text-ink-400" />

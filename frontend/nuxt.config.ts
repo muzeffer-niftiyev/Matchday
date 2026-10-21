@@ -23,10 +23,10 @@ export default defineNuxtConfig({
     pageTransition: false,
     head: {
       title: 'Matchday',
-      htmlAttrs: { lang: 'en' },
+      htmlAttrs: { lang: 'az' },
       meta: [
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-        { name: 'description', content: 'Book football fields and challenge other teams in Baku.' },
+        { name: 'description', content: 'Futbol meydançası rezerv edin və digər komandalara çağırış göndərin.' },
       ],
       link: [
         { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
@@ -45,18 +45,11 @@ export default defineNuxtConfig({
   i18n: {
     strategy: 'no_prefix',
     bundle: { optimizeTranslationDirective: false },
-    defaultLocale: 'en',
+    // The site is Azerbaijani only. All texts live in i18n/locales/az.json.
+    defaultLocale: 'az',
     langDir: 'locales',
-    lazy: true,
-    locales: [
-      { code: 'en', name: 'English', file: 'en.json' },
-      { code: 'az', name: 'Azərbaycanca', file: 'az.json' },
-    ],
-    detectBrowserLanguage: {
-      useCookie: true,
-      cookieKey: 'matchday_lang',
-      redirectOn: 'root',
-    },
+    locales: [{ code: 'az', name: 'Azərbaycanca', file: 'az.json' }],
+    detectBrowserLanguage: false,
   },
 
   piniaPluginPersistedstate: {

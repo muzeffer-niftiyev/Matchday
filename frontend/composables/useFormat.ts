@@ -1,11 +1,11 @@
 import { format, formatDistanceToNowStrict, isToday, isTomorrow, isYesterday, parseISO } from 'date-fns'
-import { az, enUS } from 'date-fns/locale'
+import { az } from 'date-fns/locale'
 import moment from 'moment'
 import { slotEnd } from '~/utils/rules'
 
 export function useFormat() {
-  const { locale, t } = useI18n()
-  const dfLocale = computed(() => (locale.value === 'az' ? az : enUS))
+  const { t } = useI18n()
+  const dfLocale = computed(() => az)
 
   // "Today", "Tomorrow", or "Sat, 25 Oct"
   function niceDate(date: string) {

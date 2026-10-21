@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import VueDatePicker from '@vuepic/vue-datepicker'
 import { addDays, format, parseISO } from 'date-fns'
-import { az, enUS } from 'date-fns/locale'
+import { az } from 'date-fns/locale'
 
 const route = useRoute()
 const router = useRouter()
 const data = useDataStore()
 const auth = useAuthStore()
-const { locale, t } = useI18n()
+const { t } = useI18n()
 const { money, longDate } = useFormat()
 
 const fieldId = computed(() => Number(route.params.id))
@@ -20,7 +20,7 @@ const tomorrow = addDays(new Date(), 1)
 const selectedDate = ref<string>(typeof route.query.date === 'string' ? route.query.date : format(tomorrow, 'yyyy-MM-dd'))
 const selectedTime = ref<string | null>(null)
 
-const dfLocale = computed(() => (locale.value === 'az' ? az : enUS))
+const dfLocale = computed(() => az)
 const days = computed(() =>
   Array.from({ length: 14 }, (_, i) => {
     const d = addDays(tomorrow, i)
@@ -103,7 +103,7 @@ function book() {
                   v-model="pickerDate"
                   :min-date="tomorrow"
                   :enable-time-picker="false"
-                  :locale="locale"
+                  locale="az"
                   auto-apply
                   :clearable="false"
                   :format="(d: Date) => format(d, 'd MMM yyyy')"

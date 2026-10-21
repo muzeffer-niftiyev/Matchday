@@ -10,7 +10,7 @@ public static class LineupRules
     {
         if (playerIds.Distinct().Count() != TeamRules.PlayersPerMatch)
         {
-            return "The lineup must have 8 different players.";
+            return "Heyətdə 8 fərqli oyunçu olmalıdır.";
         }
 
         var membersInLineup = await db.TeamMembers
@@ -18,7 +18,7 @@ public static class LineupRules
 
         if (membersInLineup != TeamRules.PlayersPerMatch)
         {
-            return "All players must be members of your team.";
+            return "Bütün oyunçular komandanızın üzvü olmalıdır.";
         }
 
         return null;

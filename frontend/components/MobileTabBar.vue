@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const route = useRoute()
-const { received } = useInvitations()
+const { attentionCount } = useInvitations()
 const auth = useAuthStore()
 
 const tabs = computed(() => [
@@ -9,7 +9,7 @@ const tabs = computed(() => [
   { to: '/teams', label: 'nav.teams', icon: 'users' },
   { to: '/fields', label: 'nav.fields', icon: 'field' },
   auth.isLoggedIn
-    ? { to: '/invitations', label: 'nav.invitationsShort', icon: 'bell', badge: received.value.length }
+    ? { to: '/invitations', label: 'nav.invitationsShort', icon: 'bell', badge: attentionCount.value }
     : { to: '/login', label: 'nav.login', icon: 'user' },
 ])
 

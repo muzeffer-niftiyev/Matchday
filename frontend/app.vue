@@ -1,8 +1,6 @@
 <script setup lang="ts">
-const { locale } = useI18n()
-
 useHead({
-  htmlAttrs: { lang: locale },
+  htmlAttrs: { lang: 'az' },
   titleTemplate: title => (title ? `${title} · Matchday` : 'Matchday'),
 })
 </script>

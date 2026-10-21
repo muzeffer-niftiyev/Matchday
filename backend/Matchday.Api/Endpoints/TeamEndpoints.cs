@@ -41,14 +41,14 @@ public static class TeamEndpoints
 
             if (alreadyInTeam)
             {
-                return Results.Conflict("You're already in a team. Leave it first to create a new one.");
+                return Results.Conflict("Siz artıq komandadasınız. Yeni komanda yaratmaq üçün əvvəlcə ondan çıxın.");
             }
 
             var nameTaken = await db.Teams.AnyAsync(t => t.Name == dto.Name);
 
             if (nameTaken)
             {
-                return Results.Conflict("A team with this name already exists.");
+                return Results.Conflict("Bu adda komanda artıq mövcuddur.");
             }
 
             var team = new Team
@@ -77,7 +77,7 @@ public static class TeamEndpoints
             }
             catch (DbUpdateException)
             {
-                return Results.Conflict("The team could not be created. The name may be taken, or you're already in a team.");
+                return Results.Conflict("Komanda yaradılmadı. Ad artıq tutulmuş ola bilər, ya da siz artıq komandadasınız.");
             }
 
             return Results.Created($"/teams/{team.Id}", new TeamDto(team.Id, team.Name, team.City, team.CreatedAt));
@@ -102,7 +102,7 @@ public static class TeamEndpoints
 
             if (nameTaken)
             {
-                return Results.Conflict("A team with this name already exists.");
+                return Results.Conflict("Bu adda komanda artıq mövcuddur.");
             }
 
             team.Name = dto.Name;
@@ -114,7 +114,7 @@ public static class TeamEndpoints
             }
             catch (DbUpdateException)
             {
-                return Results.Conflict("A team with this name already exists.");
+                return Results.Conflict("Bu adda komanda artıq mövcuddur.");
             }
 
             return Results.NoContent();
@@ -142,30 +142,7 @@ public static class TeamEndpoints
         }).RequireAuthorization();
 
         group.MapGet("/{id:int}/members", async (int id, MatchdayContext db) =>
-{
-    var teamExists = await db.Teams.AnyAsync(t => t.Id == id);
-
-    if (!teamExists)
-    {
-        return Results.NotFound();
-    }
-
-    var members = await db.TeamMembers
-        .Where(m => m.TeamId == id)
-        .OrderBy(m => m.JoinedAt)
-        .Select(m => new TeamMemberDto(
-            m.UserId,
-            m.User!.DisplayName,
-            m.Role.ToString(),
-            m.JoinedAt))
-        .ToListAsync();
-
-    return Results.Ok(members);
-});
-
-        group.MapPost("/{id:int}/join", async (int id, MatchdayContext db, ClaimsPrincipal user) =>
         {
-            var userId = int.Parse(user.FindFirstValue("sub")!);
             var teamExists = await db.Teams.AnyAsync(t => t.Id == id);
 
             if (!teamExists)
@@ -173,33 +150,18 @@ public static class TeamEndpoints
                 return Results.NotFound();
             }
 
-            var alreadyMember = await db.TeamMembers.AnyAsync(m => m.TeamId == id && m.UserId == userId);
+            var members = await db.TeamMembers
+                .Where(m => m.TeamId == id)
+                .OrderBy(m => m.JoinedAt)
+                .Select(m => new TeamMemberDto(
+                    m.UserId,
+                    m.User!.DisplayName,
+                    m.Role.ToString(),
+                    m.JoinedAt))
+                .ToListAsync();
 
-            if (alreadyMember)
-            {
-                return Results.Conflict("You are already a member of this team.");
-            }
-
-            var member = new TeamMember
-            {
-                TeamId = id,
-                UserId = userId,
-                Role = TeamRole.Player,
-                JoinedAt = DateTime.UtcNow
-            };
-
-            try
-            {
-                db.TeamMembers.Add(member);
-                await db.SaveChangesAsync();
-            }
-            catch (DbUpdateException)
-            {
-                return Results.Conflict("You are already a member of this team.");
-            }
-
-            return Results.NoContent();
-        }).RequireAuthorization();
+            return Results.Ok(members);
+        });
 
         group.MapDelete("/{id:int}/leave", async (int id, MatchdayContext db, ClaimsPrincipal user) =>
         {
@@ -213,14 +175,14 @@ public static class TeamEndpoints
 
             if (team.OwnerId == userId)
             {
-                return Results.BadRequest("The owner cannot leave the team.Delete the team instead.");
+                return Results.BadRequest("Sahib komandadan çıxa bilməz. Bunun əvəzinə komandanı silin.");
             }
 
             var membership = await db.TeamMembers.FirstOrDefaultAsync(m => m.TeamId == id && m.UserId == userId);
 
             if (membership is null)
             {
-                return Results.NotFound("You are not a member of this team.");
+                return Results.NotFound("Siz bu komandanın üzvü deyilsiniz.");
             }
 
             db.TeamMembers.Remove(membership);
@@ -246,14 +208,14 @@ public static class TeamEndpoints
 
             if (memberId == userId)
             {
-                return Results.BadRequest("You cannot remove yourself.");
+                return Results.BadRequest("Özünüzü komandadan çıxara bilməzsiniz.");
             }
 
             var member = await db.TeamMembers.FirstOrDefaultAsync(m => m.UserId == memberId && m.TeamId == team.Id);
 
             if (member is null)
             {
-                return Results.NotFound("This user is not a member of this team.");
+                return Results.NotFound("Bu istifadəçi komandanın üzvü deyil.");
             }
 
             db.TeamMembers.Remove(member);
@@ -270,28 +232,28 @@ public static class TeamEndpoints
 
             if (!teamExists)
             {
-                return Results.NotFound("Team not found.");
+                return Results.NotFound("Komanda tapılmadı.");
             }
 
             var isMember = await db.TeamMembers.AnyAsync(m => m.UserId == userId);
 
             if (isMember)
             {
-                return Results.Conflict("You're already in a team.");
+                return Results.Conflict("Siz artıq komandadasınız. Əvvəlcə ondan çıxın.");
             }
 
             var hasRequested = await db.JoinRequests.AnyAsync(r => r.UserId == userId && r.TeamId == id);
 
             if (hasRequested)
             {
-                return Results.Conflict("You already requested to join this team.");
+                return Results.Conflict("Bu komandaya artıq sorğu göndərmisiniz.");
             }
 
             var isTeamFull = await db.TeamMembers.CountAsync(m => m.TeamId == id) >= TeamRules.MaxSquadSize;
 
             if (isTeamFull)
             {
-                return Results.Conflict("The team is full.");
+                return Results.Conflict("Komanda doludur.");
             }
 
             var joinRequest = new JoinRequest
@@ -308,7 +270,7 @@ public static class TeamEndpoints
             }
             catch (DbUpdateException)
             {
-                return Results.Conflict("Request couldn't send.");
+                return Results.Conflict("Sorğu göndərilmədi.");
             }
 
             return Results.NoContent();
@@ -321,7 +283,7 @@ public static class TeamEndpoints
 
             if (request is null)
             {
-                return Results.NotFound("You have no request for this team.");
+                return Results.NotFound("Bu komandaya sorğunuz yoxdur.");
             }
 
             db.JoinRequests.Remove(request);
@@ -337,7 +299,7 @@ public static class TeamEndpoints
 
             if (team is null)
             {
-                return Results.NotFound("Team not found.");
+                return Results.NotFound("Komanda tapılmadı.");
             }
 
             if (team.OwnerId != userId)
@@ -353,5 +315,120 @@ public static class TeamEndpoints
 
             return Results.Ok(requests);
         }).RequireAuthorization();
+
+        group.MapPost("/{id:int}/join-requests/{memberId:int}/decline", async (int id, int memberId, MatchdayContext db, ClaimsPrincipal user) =>
+        {
+            var userId = int.Parse(user.FindFirstValue("sub")!);
+            var team = await db.Teams.FirstOrDefaultAsync(t => t.Id == id);
+
+            if (team is null)
+            {
+                return Results.NotFound("Komanda tapılmadı.");
+            }
+
+            if (team.OwnerId != userId)
+            {
+                return Results.Forbid();
+            }
+
+            var request = await db.JoinRequests.FirstOrDefaultAsync(r => r.TeamId == id && r.UserId == memberId);
+
+            if (request is null)
+            {
+                return Results.NotFound("Sorğu tapılmadı.");
+            }
+
+            db.JoinRequests.Remove(request);
+            await db.SaveChangesAsync();
+
+            return Results.NoContent();
+        }).RequireAuthorization();
+
+        group.MapPost("/{id:int}/join-requests/{memberId:int}/accept", async (int id, int memberId, MatchdayContext db, ClaimsPrincipal user) =>
+        {
+            var userId = int.Parse(user.FindFirstValue("sub")!);
+            var team = await db.Teams.FirstOrDefaultAsync(t => t.Id == id);
+
+            if (team is null)
+            {
+                return Results.NotFound("Komanda tapılmadı.");
+            }
+
+            if (team.OwnerId != userId)
+            {
+                return Results.Forbid();
+            }
+
+            var request = await db.JoinRequests.FirstOrDefaultAsync(r => r.TeamId == id && r.UserId == memberId);
+
+            if (request is null)
+            {
+                return Results.NotFound("Sorğu tapılmadı.");
+            }
+
+            var isTeamFull = await db.TeamMembers.CountAsync(m => m.TeamId == id) >= TeamRules.MaxSquadSize;
+
+            if (isTeamFull)
+            {
+                return Results.Conflict("Komanda doludur.");
+            }
+
+            var player = new TeamMember
+            {
+                Team = team,
+                UserId = memberId,
+                Role = TeamRole.Player,
+                JoinedAt = DateTime.UtcNow
+            };
+
+            db.TeamMembers.Add(player);
+
+            var allRequests = await db.JoinRequests
+            .Where(r => r.UserId == memberId)
+            .ToListAsync();
+
+            db.JoinRequests.RemoveRange(allRequests);
+            try
+            {
+                await db.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                return Results.Conflict("Bu oyunçu artıq başqa komandaya qoşulub.");
+            }
+
+            return Results.NoContent();
+        }).RequireAuthorization();
+
+        group.MapGet("/{id:int}/matches", async (int id, MatchdayContext db) =>
+        {
+            var team = await db.Teams.FirstOrDefaultAsync(t => t.Id == id);
+
+            if (team is null)
+            {
+                return Results.NotFound();
+            }
+
+            var matches = await db.Matches
+               .Where(m => m.HomeTeamId == id || m.AwayTeamId == id)
+               .OrderByDescending(m => m.Date)
+               .ThenByDescending(m => m.StartTime)
+               .Select(m => new MatchSummaryDto(
+                   m.Id,
+                   m.Date,
+                   m.StartTime,
+                   m.Status,
+                   m.HomeTeamId,
+                   m.HomeTeam!.Name,
+                   m.AwayTeamId,
+                   m.AwayTeam!.Name,
+                   m.HomeScore,
+                   m.AwayScore,
+                   m.Field!.Name,
+                   m.Field.City))
+               .ToListAsync();
+
+            return Results.Ok(matches);
+        });
     }
 }

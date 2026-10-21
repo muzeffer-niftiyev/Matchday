@@ -19,7 +19,7 @@
           <h2 class="max-w-md text-4xl font-bold leading-tight">{{ $t('auth.sideTitle') }}</h2>
           <p class="mt-4 max-w-md text-lg text-white/80">{{ $t('auth.sideText') }}</p>
         </div>
-        <p class="text-sm text-white/60">8 × 8 · 90 min · Baku</p>
+        <p class="text-sm text-white/60">8 × 8 · 90 dəq · Bakı</p>
       </div>
     </div>
 
@@ -29,7 +29,6 @@
           <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-500 text-white"><SvgoBall class="text-xl" /></span>
           <span class="text-lg font-bold">Matchday</span>
         </NuxtLink>
-        <LangSwitcher />
       </div>
       <div class="flex flex-1 items-center justify-center px-4 pb-16">
         <div class="w-full max-w-sm">

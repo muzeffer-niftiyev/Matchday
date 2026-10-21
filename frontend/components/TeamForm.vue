@@ -16,7 +16,7 @@ const { t } = useI18n()
 
 const form = reactive({
   name: props.initial?.name ?? '',
-  city: props.initial?.city ?? 'Baku',
+  city: props.initial?.city ?? 'Bakı',
   color: props.initial?.color ?? TEAM_COLORS[0],
 })
 

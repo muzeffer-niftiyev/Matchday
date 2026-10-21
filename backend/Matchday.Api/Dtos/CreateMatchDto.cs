@@ -7,5 +7,5 @@ public record CreateMatchDto(
     TimeOnly StartTime,
     int HomeTeamId,
     int AwayTeamId,
-    [Required, Length(8, 8)] List<int> PlayerIds
+    [Required(ErrorMessage = ValidationMessages.Required), Length(8, 8, ErrorMessage = ValidationMessages.Lineup)] List<int> PlayerIds
 );

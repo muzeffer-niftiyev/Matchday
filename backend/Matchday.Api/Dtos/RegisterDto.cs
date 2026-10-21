@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 namespace Matchday.Api.Dtos;
 
 public record RegisterDto(
-    [Required, EmailAddress, MaxLength(100)] string Email,
-    [Required, MaxLength(50)] string DisplayName,
-    [Required, MinLength(8), MaxLength(60)] string Password
+    [Required(ErrorMessage = ValidationMessages.Required), EmailAddress(ErrorMessage = ValidationMessages.Email), MaxLength(100, ErrorMessage = ValidationMessages.MaxLength)] string Email,
+    [Required(ErrorMessage = ValidationMessages.Required), MaxLength(50, ErrorMessage = ValidationMessages.MaxLength)] string DisplayName,
+    [Required(ErrorMessage = ValidationMessages.Required), MinLength(8, ErrorMessage = ValidationMessages.MinLength), MaxLength(60, ErrorMessage = ValidationMessages.MaxLength)] string Password
 );

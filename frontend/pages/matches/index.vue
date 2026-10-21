@@ -11,12 +11,12 @@ useHead({ title: () => t('nav.matches') })
 const tab = ref(typeof route.query.tab === 'string' ? route.query.tab : 'upcoming')
 const onlyMine = ref(false)
 
-const myTeamIds = computed(() => (auth.userId ? data.teamsOfUser(auth.userId).map(t => t.id) : []))
+const myTeamId = computed(() => (auth.userId ? data.teamOfUser(auth.userId)?.id : undefined))
 
 const filtered = computed(() => {
   const now = new Date()
   return data.matches
-    .filter(m => !onlyMine.value || myTeamIds.value.includes(m.homeTeamId) || myTeamIds.value.includes(m.awayTeamId))
+    .filter(m => !onlyMine.value || m.homeTeamId === myTeamId.value || m.awayTeamId === myTeamId.value)
     .filter((m) => {
       const s = data.statusOf(m)
       if (tab.value === 'upcoming') return (s === 'Confirmed' || s === 'Pending') && matchStart(m) > now
@@ -43,7 +43,7 @@ const tabs = computed(() => [
 
     <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <UiTabs v-model="tab" :tabs="tabs" />
-      <label v-if="auth.isLoggedIn" class="inline-flex cursor-pointer items-center gap-3 text-sm font-medium text-ink-600">
+      <label v-if="myTeamId" class="inline-flex cursor-pointer items-center gap-3 text-sm font-medium text-ink-600">
         <span>{{ $t('matches.onlyMine') }}</span>
         <button
           type="button"

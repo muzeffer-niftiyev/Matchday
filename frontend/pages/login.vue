@@ -55,7 +55,7 @@ function demo(userId: number) {
 
     <form class="mt-8 space-y-4" novalidate @submit.prevent="submit">
       <UiFormField :label="$t('auth.email')" :errors="v$.email.$errors">
-        <input v-model="form.email" type="email" class="input" :class="{ 'input-error': v$.email.$error }" placeholder="you@example.com" autocomplete="email" @blur="v$.email.$touch()">
+        <input v-model="form.email" type="email" class="input" :class="{ 'input-error': v$.email.$error }" placeholder="ad@numune.az" autocomplete="email" @blur="v$.email.$touch()">
       </UiFormField>
       <UiFormField :label="$t('auth.password')" :errors="v$.password.$errors">
         <input v-model="form.password" type="password" class="input" :class="{ 'input-error': v$.password.$error }" placeholder="••••••••" autocomplete="current-password" @blur="v$.password.$touch()">

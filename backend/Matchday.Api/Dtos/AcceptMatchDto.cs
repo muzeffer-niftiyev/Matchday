@@ -3,5 +3,5 @@ using System.ComponentModel.DataAnnotations;
 namespace Matchday.Api.Dtos;
 
 public record AcceptMatchDto(
-    [Required, Length(8, 8)] List<int> PlayerIds
+    [Required(ErrorMessage = ValidationMessages.Required), Length(8, 8, ErrorMessage = ValidationMessages.Lineup)] List<int> PlayerIds
 );

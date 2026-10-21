@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia'
 import { addHours, format } from 'date-fns'
 import { createDummyData } from '~/data/dummy'
-import type { Field, GrassType, Match, Team, TeamMember, User } from '~/types'
-import { INVITATION_EXPIRY_HOURS, PLAYERS_PER_MATCH, SLOT_START_TIMES, slotEnd } from '~/utils/rules'
+import type { Field, GrassType, JoinRequest, Match, Team, TeamMember, User } from '~/types'
+import { INVITATION_EXPIRY_HOURS, MAX_SQUAD_SIZE, PLAYERS_PER_MATCH, SLOT_START_TIMES, slotEnd } from '~/utils/rules'
 
 // Result of an action: ok, or the i18n key of an error message (like the backend's 400/403/409 answers).
 export type ActionResult = { ok: true; id?: number } | { ok: false; error: string }
@@ -32,13 +32,27 @@ export const useDataStore = defineStore('data', {
         .filter(m => m.teamId === teamId)
         .sort((a, b) => (a.role === 'Captain' ? -1 : b.role === 'Captain' ? 1 : a.joinedAt.localeCompare(b.joinedAt))),
 
-    teamsOfUser: state => (userId: number) =>
-      state.teams.filter(t => state.members.some(m => m.teamId === t.id && m.userId === userId)),
+    // One team per player: a user is in at most one team.
+    teamOfUser: state => (userId: number) => {
+      const membership = state.members.find(m => m.userId === userId)
+      return membership ? state.teams.find(t => t.id === membership.teamId) : undefined
+    },
 
-    ownedTeams: state => (userId: number) => state.teams.filter(t => t.ownerId === userId),
+    // The team this user owns (their own team, if they are its captain).
+    ownedTeam: state => (userId: number) => state.teams.find(t => t.ownerId === userId),
 
     isMember: state => (teamId: number, userId: number) =>
       state.members.some(m => m.teamId === teamId && m.userId === userId),
+
+    // Join requests: oldest first, like GET /teams/{id}/join-requests
+    requestsOfTeam: state => (teamId: number) =>
+      state.joinRequests.filter(r => r.teamId === teamId).sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+
+    requestsOfUser: state => (userId: number) =>
+      state.joinRequests.filter(r => r.userId === userId),
+
+    hasRequested: state => (teamId: number, userId: number) =>
+      state.joinRequests.some(r => r.teamId === teamId && r.userId === userId),
 
     // A pending invitation whose 5 hours have passed counts as expired (lazy expiry, like the backend).
     statusOf: () => (m: Match) =>
@@ -72,12 +86,15 @@ export const useDataStore = defineStore('data', {
 
     // ---------- Teams ----------
     createTeam(userId: number, name: string, city: string, color: string): ActionResult {
+      if (this.teamOfUser(userId)) return fail('errors.alreadyInTeam')
       if (this.teams.some(t => t.name.toLowerCase() === name.trim().toLowerCase())) return fail('errors.teamNameTaken')
 
       const id = Math.max(0, ...this.teams.map(t => t.id)) + 1
       const now = new Date().toISOString()
       this.teams.push({ id, name: name.trim(), city, color, ownerId: userId, createdAt: now })
       this.members.push({ teamId: id, userId, role: 'Captain', joinedAt: now })
+      // The creator is now in a team, so their open requests to other teams are no longer valid.
+      this.joinRequests = this.joinRequests.filter(r => r.userId !== userId)
       return ok(id)
     },
 
@@ -98,15 +115,50 @@ export const useDataStore = defineStore('data', {
 
       this.teams = this.teams.filter(t => t.id !== teamId)
       this.members = this.members.filter(m => m.teamId !== teamId)
+      this.joinRequests = this.joinRequests.filter(r => r.teamId !== teamId)
       this.matches = this.matches.filter(m => m.homeTeamId !== teamId && m.awayTeamId !== teamId)
       return ok()
     },
 
-    joinTeam(teamId: number, userId: number): ActionResult {
+    // ---------- Join requests (POST/DELETE /teams/{id}/join-requests, .../accept, .../decline) ----------
+    requestToJoin(teamId: number, userId: number): ActionResult {
       if (!this.team(teamId)) return fail('errors.notFound')
-      if (this.isMember(teamId, userId)) return fail('errors.alreadyMember')
+      if (this.teamOfUser(userId)) return fail('errors.alreadyInTeam')
+      if (this.hasRequested(teamId, userId)) return fail('errors.alreadyRequested')
+      if (this.teamMembers(teamId).length >= MAX_SQUAD_SIZE) return fail('errors.teamFull')
 
-      this.members.push({ teamId, userId, role: 'Player', joinedAt: new Date().toISOString() })
+      this.joinRequests.push({ teamId, userId, createdAt: new Date().toISOString() })
+      return ok()
+    },
+
+    cancelRequest(teamId: number, userId: number): ActionResult {
+      if (!this.hasRequested(teamId, userId)) return fail('errors.noRequest')
+
+      this.joinRequests = this.joinRequests.filter(r => !(r.teamId === teamId && r.userId === userId))
+      return ok()
+    },
+
+    acceptRequest(teamId: number, ownerId: number, memberId: number): ActionResult {
+      const team = this.team(teamId)
+      if (!team) return fail('errors.notFound')
+      if (team.ownerId !== ownerId) return fail('errors.forbidden')
+      if (!this.hasRequested(teamId, memberId)) return fail('errors.noRequest')
+      if (this.teamMembers(teamId).length >= MAX_SQUAD_SIZE) return fail('errors.teamFull')
+      if (this.teamOfUser(memberId)) return fail('errors.playerInOtherTeam')
+
+      // One "transaction": add the member AND delete ALL of the player's requests.
+      this.members.push({ teamId, userId: memberId, role: 'Player', joinedAt: new Date().toISOString() })
+      this.joinRequests = this.joinRequests.filter(r => r.userId !== memberId)
+      return ok()
+    },
+
+    declineRequest(teamId: number, ownerId: number, memberId: number): ActionResult {
+      const team = this.team(teamId)
+      if (!team) return fail('errors.notFound')
+      if (team.ownerId !== ownerId) return fail('errors.forbidden')
+      if (!this.hasRequested(teamId, memberId)) return fail('errors.noRequest')
+
+      this.joinRequests = this.joinRequests.filter(r => !(r.teamId === teamId && r.userId === memberId))
       return ok()
     },
 
@@ -273,7 +325,8 @@ export const useDataStore = defineStore('data', {
     },
   },
 
-  persist: true,
+  // v3: Azerbaijani demo data, one team per player + join requests (old saved demo data is ignored)
+  persist: { key: 'matchday-data-v3' },
 })
 
-export type { Field, GrassType, Match, Team, TeamMember, User }
+export type { Field, GrassType, JoinRequest, Match, Team, TeamMember, User }

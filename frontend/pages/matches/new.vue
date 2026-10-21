@@ -18,37 +18,33 @@ const date = String(route.query.date ?? '')
 const time = String(route.query.time ?? '')
 const field = computed(() => data.field(fieldId))
 
-const myTeams = computed(() => data.ownedTeams(auth.userId!))
+// One team per player: the home team is simply the team I own. Only its captain can book.
+const myTeam = computed(() => data.teamOfUser(auth.userId!))
+const homeTeam = computed(() => data.ownedTeam(auth.userId!))
 
 const step = ref(1)
-const homeTeamId = ref<number | null>(myTeams.value.length === 1 ? myTeams.value[0].id : null)
 const awayTeamId = ref<number | null>(null)
 const lineup = ref<number[]>([])
 const opponentSearch = ref('')
 const loading = ref(false)
 
-watch(homeTeamId, () => (lineup.value = []))
-
-const homeTeam = computed(() => (homeTeamId.value ? data.team(homeTeamId.value) : undefined))
 const awayTeam = computed(() => (awayTeamId.value ? data.team(awayTeamId.value) : undefined))
 
 const opponents = computed(() =>
   data.teams
-    .filter(team => team.id !== homeTeamId.value)
+    .filter(team => team.id !== homeTeam.value?.id)
     .filter(team => team.name.toLowerCase().includes(opponentSearch.value.toLowerCase())),
 )
 
 const steps = computed(() => [
-  { n: 1, label: t('book.stepTeam') },
-  { n: 2, label: t('book.stepOpponent') },
-  { n: 3, label: t('book.stepLineup') },
-  { n: 4, label: t('book.stepReview') },
+  { n: 1, label: t('book.stepOpponent') },
+  { n: 2, label: t('book.stepLineup') },
+  { n: 3, label: t('book.stepReview') },
 ])
 
 const canNext = computed(() => {
-  if (step.value === 1) return !!homeTeamId.value
-  if (step.value === 2) return !!awayTeamId.value
-  if (step.value === 3) return lineup.value.length === PLAYERS_PER_MATCH
+  if (step.value === 1) return !!awayTeamId.value
+  if (step.value === 2) return lineup.value.length === PLAYERS_PER_MATCH
   return true
 })
 
@@ -59,7 +55,7 @@ async function submit() {
     fieldId,
     date,
     startTime: time,
-    homeTeamId: homeTeamId.value!,
+    homeTeamId: homeTeam.value!.id,
     awayTeamId: awayTeamId.value!,
     playerIds: lineup.value,
   })
@@ -79,13 +75,23 @@ async function submit() {
       <UiButton to="/fields" size="sm">{{ $t('nav.fields') }}</UiButton>
     </UiEmptyState>
 
-    <UiEmptyState v-else-if="!myTeams.length" :title="$t('book.noTeamTitle')" :text="$t('book.noTeamText')">
+    <!-- Not in any team yet -->
+    <UiEmptyState v-else-if="!myTeam" :title="$t('book.noTeamTitle')" :text="$t('book.noTeamText')">
       <template #icon><SvgoUsers class="text-2xl" /></template>
-      <UiButton to="/teams/new" size="sm">{{ $t('teams.create') }}</UiButton>
+      <div class="flex flex-wrap justify-center gap-2">
+        <UiButton to="/teams" variant="secondary" size="sm">{{ $t('teams.findTeam') }}</UiButton>
+        <UiButton to="/teams/new" size="sm">{{ $t('teams.create') }}</UiButton>
+      </div>
+    </UiEmptyState>
+
+    <!-- In a team, but not its captain -->
+    <UiEmptyState v-else-if="!homeTeam" :title="$t('book.onlyCaptainTitle')" :text="$t('book.onlyCaptainText', { team: myTeam.name })">
+      <template #icon><SvgoCrown class="text-2xl" /></template>
+      <UiButton :to="`/teams/${myTeam.id}`" size="sm">{{ myTeam.name }}</UiButton>
     </UiEmptyState>
 
     <template v-else>
-      <!-- Where and when -->
+      <!-- Where, when, and who is playing -->
       <div class="card mb-6 flex flex-wrap items-center gap-x-6 gap-y-3 p-5">
         <div class="flex items-center gap-3">
           <span class="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br text-white" :class="field.gradient"><SvgoField class="text-xl" /></span>
@@ -96,10 +102,13 @@ async function submit() {
         </div>
         <div class="flex items-center gap-2 text-sm text-ink-600"><SvgoCalendar class="text-base text-ink-400" /> <span class="capitalize">{{ longDate(date) }}</span></div>
         <div class="flex items-center gap-2 text-sm text-ink-600"><SvgoClock class="text-base text-ink-400" /> {{ timeRange(time) }}</div>
+        <div class="flex items-center gap-2 text-sm text-ink-600">
+          <TeamBadge :team="homeTeam" size="sm" /> <span class="font-medium text-ink-800">{{ homeTeam.name }}</span>
+        </div>
       </div>
 
       <!-- Stepper -->
-      <ol class="mb-6 grid grid-cols-4 gap-2">
+      <ol class="mb-6 grid grid-cols-3 gap-2">
         <li v-for="s in steps" :key="s.n">
           <div class="mb-2 h-1.5 rounded-full transition-colors duration-300" :class="step >= s.n ? 'bg-brand-500' : 'bg-ink-200'" />
           <p class="text-xs font-medium sm:text-sm" :class="step >= s.n ? 'text-ink-800' : 'text-ink-400'">{{ s.label }}</p>
@@ -108,29 +117,8 @@ async function submit() {
 
       <div class="card p-5 sm:p-7">
         <div :key="step" class="animate-step-in">
-          <!-- Step 1: your team -->
-          <div v-if="step === 1" key="1">
-            <h2 class="section-title mb-1">{{ $t('book.chooseTeam') }}</h2>
-            <p class="mb-5 text-sm text-ink-500">{{ $t('book.chooseTeamText') }}</p>
-            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <button
-                v-for="team in myTeams"
-                :key="team.id"
-                class="flex items-center gap-3 rounded-2xl border p-4 text-left transition"
-                :class="homeTeamId === team.id ? 'border-brand-400 bg-brand-50 ring-4 ring-brand-100' : 'border-ink-200 hover:border-ink-300'"
-                @click="homeTeamId = team.id"
-              >
-                <TeamBadge :team="team" />
-                <div>
-                  <p class="font-semibold text-ink-900">{{ team.name }}</p>
-                  <p class="text-xs text-ink-500">{{ $t('teams.playersCount', { n: data.teamMembers(team.id).length }) }}</p>
-                </div>
-              </button>
-            </div>
-          </div>
-
-          <!-- Step 2: opponent -->
-          <div v-else-if="step === 2" key="2">
+          <!-- Step 1: opponent -->
+          <div v-if="step === 1">
             <h2 class="section-title mb-1">{{ $t('book.chooseOpponent') }}</h2>
             <p class="mb-5 text-sm text-ink-500">{{ $t('book.chooseOpponentText') }}</p>
             <div class="relative mb-4">
@@ -154,17 +142,17 @@ async function submit() {
             </div>
           </div>
 
-          <!-- Step 3: lineup -->
-          <div v-else-if="step === 3" key="3">
+          <!-- Step 2: lineup -->
+          <div v-else-if="step === 2">
             <h2 class="section-title mb-1">{{ $t('book.chooseLineup', { n: PLAYERS_PER_MATCH }) }}</h2>
             <p class="mb-5 text-sm text-ink-500">{{ $t('book.chooseLineupText') }}</p>
-            <LineupPicker v-model="lineup" :team-id="homeTeamId!" />
+            <LineupPicker v-model="lineup" :team-id="homeTeam.id" />
           </div>
 
-          <!-- Step 4: review -->
-          <div v-else key="4">
+          <!-- Step 3: review -->
+          <div v-else>
             <h2 class="section-title mb-5">{{ $t('book.review') }}</h2>
-            <div v-if="homeTeam && awayTeam" class="mb-6 flex items-center justify-around rounded-2xl bg-ink-50 p-6">
+            <div v-if="awayTeam" class="mb-6 flex items-center justify-around rounded-2xl bg-ink-50 p-6">
               <div class="flex flex-col items-center gap-2 text-center">
                 <TeamBadge :team="homeTeam" size="lg" />
                 <p class="text-sm font-semibold">{{ homeTeam.name }}</p>
@@ -191,7 +179,7 @@ async function submit() {
         <div class="mt-8 flex justify-between gap-3 border-t border-ink-100 pt-5">
           <UiButton v-if="step > 1" variant="secondary" @click="step--"><SvgoChevronLeft class="text-base" /> {{ $t('common.back') }}</UiButton>
           <span v-else />
-          <UiButton v-if="step < 4" :disabled="!canNext" @click="step++">{{ $t('common.next') }} <SvgoChevronRight class="text-base" /></UiButton>
+          <UiButton v-if="step < 3" :disabled="!canNext" @click="step++">{{ $t('common.next') }} <SvgoChevronRight class="text-base" /></UiButton>
           <UiButton v-else :loading="loading" @click="submit"><SvgoSend class="text-base" /> {{ $t('book.send') }}</UiButton>
         </div>
       </div>

@@ -4,7 +4,7 @@ import { onClickOutside } from '@vueuse/core'
 const auth = useAuthStore()
 const notify = useNotify()
 const router = useRouter()
-const { received } = useInvitations()
+const { attentionCount } = useInvitations()
 
 const menuOpen = ref(false)
 const menuRef = ref<HTMLElement | null>(null)
@@ -49,7 +49,6 @@ function logout() {
       </nav>
 
       <div class="flex items-center gap-1">
-        <LangSwitcher />
 
         <template v-if="auth.user">
           <NuxtLink
@@ -58,8 +57,8 @@ function logout() {
             :aria-label="$t('nav.invitations')"
           >
             <SvgoBell class="text-xl" />
-            <span v-if="received.length" class="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white ring-2 ring-white">
-              {{ received.length }}
+            <span v-if="attentionCount" class="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white ring-2 ring-white">
+              {{ attentionCount }}
             </span>
           </NuxtLink>
 

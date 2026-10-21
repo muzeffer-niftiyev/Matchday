@@ -127,8 +127,8 @@
     "statTeams": "Komandalarım",
     "statUpcoming": "Qarşıdakı oyunlar",
     "statInvites": "Dəvətlər",
-    "inviteBannerTitle": "Sizi {n} dəvət gözləyir",
-    "inviteBannerText": "Vaxtı bitməmiş cavab verin.",
+    "inviteBannerTitle": "Cavabınızı gözləyən {n} sorğu var",
+    "inviteBannerText": "Oyun dəvətləri və qoşulma sorğuları.",
     "howTitle": "Necə işləyir",
     "step1Title": "Komandanı qur",
     "step1Text": "Komanda yarat və dostlarını dəvət et. Heyətin ölçüsü istənilən ola bilər.",
@@ -141,7 +141,8 @@
     "noUpcoming": "Planlaşdırılmış oyun yoxdur",
     "noUpcomingText": "Meydança rezerv edin və başqa komandaya çağırış göndərin.",
     "latestResults": "Son nəticələr",
-    "popularFields": "Meydançalar"
+    "popularFields": "Meydançalar",
+    "statSquad": "Heyətim"
   },
   "teams": {
     "owner": "Sahib",
@@ -160,7 +161,7 @@
     "form": {
       "previewName": "Komandanız",
       "name": "Komandanın adı",
-      "namePlaceholder": "məs. Sabah Amateurs",
+      "namePlaceholder": "məs. Sabah Həvəskarları",
       "city": "Şəhər",
       "color": "Komandanın rəngi",
       "custom": "Digər"
@@ -189,7 +190,31 @@
     "left": "{name} komandasından çıxdınız",
     "updated": "Komanda yeniləndi",
     "deleted": "{name} silindi",
-    "kicked": "{name} komandadan çıxarıldı"
+    "kicked": "{name} komandadan çıxarıldı",
+    "requestJoin": "Qoşulmaq üçün sorğu",
+    "requested": "Sorğu göndərilib",
+    "cancelRequest": "Sorğunu ləğv et",
+    "inAnotherTeam": "Siz başqa komandadasınız",
+    "full": "Komanda doludur",
+    "requests": "Sorğular",
+    "requestsEmpty": "Qoşulma sorğusu yoxdur",
+    "requestsEmptyText": "Oyunçular komandanıza qoşulmaq istəyəndə burada görünəcək.",
+    "requestedAgo": "{time} sorğu göndərib",
+    "accept": "Qəbul et",
+    "decline": "Rədd et",
+    "requestSent": "{name} komandasına sorğu göndərildi. Kapitan qərar verəcək.",
+    "requestCancelled": "Sorğu ləğv edildi",
+    "requestAccepted": "{name} komandanıza qoşuldu!",
+    "requestDeclined": "{name} adlı oyunçunun sorğusu rədd edildi",
+    "squadSize": "{n} / {max} oyunçu",
+    "oneTeamNote": "Oyunçu yalnız bir komandada ola bilər. Siz bu komandada oynayırsınız:",
+    "requestedNote": "Sorğunuz kapitanı gözləyir. Başqa komanda sizi daha tez qəbul etsə, bu sorğu silinəcək.",
+    "fullNote": "Heyətiniz doludur ({max} oyunçu). Yeni oyunçu qəbul etməzdən əvvəl birini çıxarın.",
+    "myTeam": "Komandam",
+    "findTeam": "Komanda tap",
+    "alreadyInTeamTitle": "Siz artıq komandadasınız",
+    "alreadyInTeamText": "Oyunçu yalnız bir komandada ola bilər. Öz komandanızı yaratmaq üçün əvvəlcə {team} komandasından çıxın.",
+    "createCancelsRequests": "Sizin {n} açıq qoşulma sorğunuz var. Komanda yaratsanız, onlar ləğv olunacaq."
   },
   "fields": {
     "perHour": "saatı",
@@ -217,11 +242,11 @@
   },
   "book": {
     "title": "Oyun rezerv et",
-    "subtitle": "Dörd sadə addım və dəvətiniz yola düşür.",
+    "subtitle": "Üç sadə addım və dəvətiniz yola düşür.",
     "missingTitle": "Əvvəlcə meydança və vaxt seçin",
     "missingText": "Rezervasiyaya başlamaq üçün meydançanı açın və boş vaxt seçin.",
     "noTeamTitle": "Hələ komandanız yoxdur",
-    "noTeamText": "Yalnız komanda sahibləri oyun rezerv edə bilər. Əvvəlcə komanda yaradın.",
+    "noTeamText": "Komandaya qoşulun və ya öz komandanızı yaradın. Yalnız kapitanlar oyun rezerv edə bilər.",
     "stepTeam": "Komandanız",
     "stepOpponent": "Rəqib",
     "stepLineup": "Heyət",
@@ -235,7 +260,9 @@
     "review": "Hər şeyi yoxlayın",
     "expiryNote": "Vaxt 5 saat saxlanılır. Digər komanda vaxtında cavab verməsə, dəvətin vaxtı bitir.",
     "send": "Dəvət göndər",
-    "sent": "Dəvət {team} komandasına göndərildi!"
+    "sent": "Dəvət {team} komandasına göndərildi!",
+    "onlyCaptainTitle": "Yalnız kapitan rezerv edə bilər",
+    "onlyCaptainText": "Siz {team} komandasında oynayırsınız. Kapitanınızdan oyun rezerv etməsini xahiş edin."
   },
   "matches": {
     "upcoming": "Qarşıdakı",
@@ -243,7 +270,7 @@
     "all": "Hamısı",
     "subtitle": "Matchday-dəki bütün oyunlar, dəvətdən yekun hesaba qədər.",
     "book": "Oyun rezerv et",
-    "onlyMine": "Yalnız mənim komandalarım",
+    "onlyMine": "Yalnız mənim komandam",
     "noneTitle": "Burada hələ oyun yoxdur",
     "noneText": "Meydança rezerv edin və komandaya çağırış göndərin."
   },
@@ -257,7 +284,14 @@
     "noneSent": "Gözləyən dəvət yoxdur",
     "noneReceivedText": "Başqa komanda sizə çağırış göndərəndə burada görünəcək.",
     "noneSentText": "Meydança rezerv edin və komandanı oyuna dəvət edin.",
-    "note": "Dəvətlərin vaxtı göndərildikdən 5 saat sonra bitir. Komandanın eyni anda yalnız bir gözləyən dəvəti ola bilər."
+    "note": "Dəvətlərin vaxtı göndərildikdən 5 saat sonra bitir. Komandanın eyni anda yalnız bir gözləyən dəvəti ola bilər.",
+    "joinRequests": "Qoşulma sorğuları",
+    "myRequests": "Sorğularım",
+    "myRequestsText": "Qoşulmaq istədiyiniz komandalar. Biri sizi qəbul edəndə digərləri ləğv olunur.",
+    "noMyRequests": "Açıq sorğu yoxdur",
+    "noMyRequestsText": "Bəyəndiyiniz komandanı tapın və qoşulmaq üçün sorğu göndərin, ya da öz komandanızı yaradın.",
+    "playerTitle": "Dəvətlərlə kapitan məşğul olur",
+    "playerText": "{team} üçün oyun dəvətləri və qoşulma sorğuları kapitana gedir."
   },
   "profile": {
     "admin": "Administrator",
@@ -271,9 +305,11 @@
     "resetDone": "Demo məlumatları bərpa olundu",
     "myTeams": "Komandalarım",
     "noTeams": "Hələ heç bir komandada deyilsiniz",
-    "noTeamsText": "Komandaya qoşulun və ya öz komandanızı yaradın.",
+    "noTeamsText": "Komandaya qoşulmaq üçün sorğu göndərin və ya öz komandanızı yaradıb kapitan olun.",
     "myMatches": "Oyunlarım",
-    "noMatches": "Hələ heç bir oyun oynamamısınız"
+    "noMatches": "Hələ heç bir oyun oynamamısınız",
+    "squad": "Heyət",
+    "myTeam": "Komandam"
   },
   "admin": {
     "scores": "Hesablar",
@@ -321,6 +357,11 @@
     "alreadyStarted": "Başlamış oyunu ləğv edə bilməzsiniz",
     "onlyConfirmed": "Yalnız təsdiqlənmiş oyunlara hesab yazıla bilər",
     "notFinished": "Oyun hələ bitməyib",
-    "emailTaken": "Bu e-poçt artıq qeydiyyatdan keçib"
+    "emailTaken": "Bu e-poçt artıq qeydiyyatdan keçib",
+    "alreadyInTeam": "Siz artıq komandadasınız. Əvvəlcə ondan çıxın.",
+    "alreadyRequested": "Bu komandaya artıq sorğu göndərmisiniz.",
+    "teamFull": "Bu komanda doludur.",
+    "noRequest": "Bu komanda üçün sorğu yoxdur.",
+    "playerInOtherTeam": "Bu oyunçu artıq başqa komandaya qoşulub."
   }
 }

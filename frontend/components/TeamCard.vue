@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { Team } from '~/types'
 
+import { MAX_SQUAD_SIZE } from '~/utils/rules'
+
 const props = defineProps<{ team: Team }>()
 
 const data = useDataStore()
@@ -10,6 +12,7 @@ const memberCount = computed(() => data.teamMembers(props.team.id).length)
 const owner = computed(() => data.user(props.team.ownerId))
 const isMine = computed(() => auth.userId !== null && data.isMember(props.team.id, auth.userId))
 const isOwner = computed(() => props.team.ownerId === auth.userId)
+const requested = computed(() => auth.userId !== null && data.hasRequested(props.team.id, auth.userId))
 </script>
 
 <template>
@@ -21,10 +24,11 @@ const isOwner = computed(() => props.team.ownerId === auth.userId)
         <h3 class="truncate font-semibold text-ink-900 transition group-hover:text-brand-600">{{ team.name }}</h3>
         <span v-if="isOwner" class="chip bg-amber-50 text-amber-700"><SvgoCrown class="text-xs" /> {{ $t('teams.owner') }}</span>
         <span v-else-if="isMine" class="chip bg-brand-50 text-brand-700">{{ $t('teams.member') }}</span>
+        <span v-else-if="requested" class="chip bg-amber-50 text-amber-700"><SvgoClock class="text-xs" /> {{ $t('teams.requested') }}</span>
       </div>
       <p class="mt-1 flex items-center gap-1 text-sm text-ink-500"><SvgoPin class="text-sm" /> {{ team.city }}</p>
       <div class="mt-3 flex items-center gap-3 text-xs text-ink-500">
-        <span class="inline-flex items-center gap-1"><SvgoUsers class="text-sm" /> {{ $t('teams.playersCount', { n: memberCount }) }}</span>
+        <span class="inline-flex items-center gap-1"><SvgoUsers class="text-sm" /> {{ $t('teams.squadSize', { n: memberCount, max: MAX_SQUAD_SIZE }) }}</span>
         <span v-if="owner" class="hidden truncate sm:inline">{{ $t('teams.captain') }}: {{ owner.displayName }}</span>
       </div>
     </div>

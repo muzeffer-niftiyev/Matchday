@@ -1,17 +1,31 @@
-// Invitations of the logged-in user: received (I own the away team) and sent (I own the home team).
+// Everything waiting for the logged-in user's attention:
+// - match invitations received / sent (only team owners answer or send them)
+// - join requests to my team (owner) and my own open requests (player without a team)
 export function useInvitations() {
   const data = useDataStore()
   const auth = useAuthStore()
 
-  const myTeamIds = computed(() => (auth.userId ? data.ownedTeams(auth.userId).map(t => t.id) : []))
+  const myTeam = computed(() => (auth.userId ? data.teamOfUser(auth.userId) : undefined))
+  const ownedTeam = computed(() => (auth.userId ? data.ownedTeam(auth.userId) : undefined))
 
   const received = computed(() =>
-    data.matches.filter(m => myTeamIds.value.includes(m.awayTeamId) && data.statusOf(m) === 'Pending'),
+    ownedTeam.value
+      ? data.matches.filter(m => m.awayTeamId === ownedTeam.value!.id && data.statusOf(m) === 'Pending')
+      : [],
   )
 
   const sent = computed(() =>
-    data.matches.filter(m => myTeamIds.value.includes(m.homeTeamId) && data.statusOf(m) === 'Pending'),
+    ownedTeam.value
+      ? data.matches.filter(m => m.homeTeamId === ownedTeam.value!.id && data.statusOf(m) === 'Pending')
+      : [],
   )
 
-  return { received, sent }
+  const joinRequests = computed(() => (ownedTeam.value ? data.requestsOfTeam(ownedTeam.value.id) : []))
+
+  const myRequests = computed(() => (auth.userId && !myTeam.value ? data.requestsOfUser(auth.userId) : []))
+
+  // The red badge on the bell: things I must answer
+  const attentionCount = computed(() => received.value.length + joinRequests.value.length)
+
+  return { myTeam, ownedTeam, received, sent, joinRequests, myRequests, attentionCount }
 }

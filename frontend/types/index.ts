@@ -28,6 +28,13 @@ export interface TeamMember {
   joinedAt: string
 }
 
+// A player asked to join a team. Accepted or declined requests are deleted.
+export interface JoinRequest {
+  teamId: number
+  userId: number
+  createdAt: string
+}
+
 export interface Field {
   id: number
   name: string

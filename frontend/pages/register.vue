@@ -61,10 +61,10 @@ async function submit() {
 
     <form class="mt-8 space-y-4" novalidate @submit.prevent="submit">
       <UiFormField :label="$t('auth.displayName')" :errors="v$.displayName.$errors">
-        <input v-model="form.displayName" class="input" :class="{ 'input-error': v$.displayName.$error }" placeholder="Ali Mammadov" autocomplete="name" @blur="v$.displayName.$touch()">
+        <input v-model="form.displayName" class="input" :class="{ 'input-error': v$.displayName.$error }" placeholder="Əli Məmmədov" autocomplete="name" @blur="v$.displayName.$touch()">
       </UiFormField>
       <UiFormField :label="$t('auth.email')" :errors="v$.email.$errors">
-        <input v-model="form.email" type="email" class="input" :class="{ 'input-error': v$.email.$error }" placeholder="you@example.com" autocomplete="email" @blur="v$.email.$touch()">
+        <input v-model="form.email" type="email" class="input" :class="{ 'input-error': v$.email.$error }" placeholder="ad@numune.az" autocomplete="email" @blur="v$.email.$touch()">
       </UiFormField>
       <UiFormField :label="$t('auth.password')" :errors="v$.password.$errors" :hint="$t('validation.minLength', { n: 8 })">
         <input v-model="form.password" type="password" class="input" :class="{ 'input-error': v$.password.$error }" placeholder="••••••••" autocomplete="new-password" @blur="v$.password.$touch()">

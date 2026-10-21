@@ -7,11 +7,12 @@ const data = useDataStore()
 const auth = useAuthStore()
 const notify = useNotify()
 const router = useRouter()
-const { locale, locales, setLocale, t } = useI18n()
+const { t } = useI18n()
 
 useHead({ title: () => t('nav.profile') })
 
-const myTeams = computed(() => data.teamsOfUser(auth.userId!))
+const myTeam = computed(() => data.teamOfUser(auth.userId!))
+const myRequests = computed(() => (myTeam.value ? [] : data.requestsOfUser(auth.userId!)))
 
 const myMatches = computed(() =>
   data.matches
@@ -51,25 +52,13 @@ function resetDemo() {
           <span v-if="auth.isAdmin" class="chip mt-3 bg-ink-900 text-white"><SvgoShield class="text-xs" /> {{ $t('profile.admin') }}</span>
 
           <div class="mt-6 grid grid-cols-3 gap-2 rounded-2xl bg-ink-50 p-3">
-            <div><p class="text-lg font-bold text-ink-900">{{ myTeams.length }}</p><p class="text-[11px] text-ink-500">{{ $t('profile.teams') }}</p></div>
+            <div><p class="text-lg font-bold text-ink-900">{{ myTeam ? data.teamMembers(myTeam.id).length : '—' }}</p><p class="text-[11px] text-ink-500">{{ $t('profile.squad') }}</p></div>
             <div><p class="text-lg font-bold text-ink-900">{{ played }}</p><p class="text-[11px] text-ink-500">{{ $t('profile.played') }}</p></div>
             <div><p class="text-lg font-bold text-ink-900">{{ upcoming.length }}</p><p class="text-[11px] text-ink-500">{{ $t('profile.upcoming') }}</p></div>
           </div>
         </div>
 
         <div class="card divide-y divide-ink-100">
-          <div class="flex items-center justify-between px-5 py-4">
-            <span class="flex items-center gap-2 text-sm font-medium text-ink-700"><SvgoGlobe class="text-base text-ink-400" /> {{ $t('profile.language') }}</span>
-            <div class="flex gap-1 rounded-xl bg-ink-100 p-1">
-              <button
-                v-for="l in locales"
-                :key="l.code"
-                class="rounded-lg px-2.5 py-1 text-xs font-semibold uppercase transition"
-                :class="locale === l.code ? 'bg-white text-ink-900 shadow-sm' : 'text-ink-500'"
-                @click="setLocale(l.code)"
-              >{{ l.code }}</button>
-            </div>
-          </div>
           <NuxtLink v-if="auth.isAdmin" to="/admin" class="flex items-center gap-2 px-5 py-4 text-sm font-medium text-ink-700 transition hover:bg-ink-50">
             <SvgoShield class="text-base text-ink-400" /> {{ $t('nav.admin') }}
           </NuxtLink>
@@ -85,17 +74,30 @@ function resetDemo() {
       <!-- Right -->
       <div class="space-y-8">
         <section>
-          <div class="mb-4 flex items-center justify-between">
-            <h2 class="section-title">{{ $t('profile.myTeams') }}</h2>
-            <UiButton to="/teams/new" variant="soft" size="sm"><SvgoPlus class="text-base" /> {{ $t('teams.create') }}</UiButton>
-          </div>
-          <div v-if="myTeams.length" class="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <TeamCard v-for="team in myTeams" :key="team.id" :team="team" />
-          </div>
+          <h2 class="section-title mb-4">{{ $t('profile.myTeam') }}</h2>
+          <TeamCard v-if="myTeam" :team="myTeam" />
           <UiEmptyState v-else :title="$t('profile.noTeams')" :text="$t('profile.noTeamsText')">
             <template #icon><SvgoUsers class="text-2xl" /></template>
-            <UiButton to="/teams" size="sm">{{ $t('nav.teams') }}</UiButton>
+            <div class="flex flex-wrap justify-center gap-2">
+              <UiButton to="/teams" variant="secondary" size="sm">{{ $t('teams.findTeam') }}</UiButton>
+              <UiButton to="/teams/new" size="sm"><SvgoPlus class="text-base" /> {{ $t('teams.create') }}</UiButton>
+            </div>
           </UiEmptyState>
+        </section>
+
+        <!-- Open join requests (only while I'm not in a team) -->
+        <section v-if="myRequests.length">
+          <div class="mb-4 flex items-center justify-between">
+            <h2 class="section-title">{{ $t('invitations.myRequests') }}</h2>
+            <NuxtLink to="/invitations" class="text-sm font-medium text-brand-600 hover:text-brand-700">{{ $t('common.seeAll') }}</NuxtLink>
+          </div>
+          <div class="card divide-y divide-ink-100">
+            <NuxtLink v-for="r in myRequests" :key="r.teamId" :to="`/teams/${r.teamId}`" class="flex items-center gap-3 px-5 py-3.5 transition hover:bg-ink-50">
+              <TeamBadge :team="data.team(r.teamId)!" size="sm" />
+              <span class="flex-1 truncate font-medium text-ink-800">{{ data.team(r.teamId)?.name }}</span>
+              <span class="chip bg-amber-50 text-amber-700"><SvgoClock class="text-xs" /> {{ $t('teams.requested') }}</span>
+            </NuxtLink>
+          </div>
         </section>
 
         <section>
