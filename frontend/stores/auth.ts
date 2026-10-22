@@ -1,38 +1,51 @@
 import { defineStore } from 'pinia'
-import { useDataStore } from './data'
+import type { User } from '~/types'
 
-// Demo login: no real passwords. Later this store will keep the JWT token from POST /auth/login.
+// Real authentication against the backend:
+//   POST /auth/login    → { token }
+//   GET  /auth/me       → the current user (read from the database, so the role is always fresh)
+//   POST /auth/register → creates the user (then we log in)
 export const useAuthStore = defineStore('auth', {
   state: () => ({
-    userId: null as number | null,
+    token: null as string | null,
+    user: null as User | null,
   }),
 
   getters: {
-    user(): ReturnType<ReturnType<typeof useDataStore>['user']> {
-      return this.userId ? useDataStore().user(this.userId) : undefined
-    },
-    isLoggedIn(): boolean {
-      return !!this.user
-    },
-    isAdmin(): boolean {
-      return this.user?.role === 'Admin'
-    },
+    userId: state => state.user?.id ?? null,
+    isLoggedIn: state => !!state.token && !!state.user,
+    isAdmin: state => state.user?.role === 'Admin',
   },
 
   actions: {
-    loginAs(userId: number) {
-      this.userId = userId
+    async login(email: string, password: string) {
+      const api = useApi()
+      const { token } = await api<{ token: string }>('/auth/login', {
+        method: 'POST',
+        body: { email, password },
+      })
+      this.token = token
+      await this.fetchMe()
     },
 
-    loginWithEmail(email: string) {
-      const data = useDataStore()
-      const existing = data.users.find(u => u.email.toLowerCase() === email.trim().toLowerCase())
-      // Any unknown email logs in as the demo player (Ali), so the demo is easy to explore.
-      this.userId = existing?.id ?? 1
+    async register(displayName: string, email: string, password: string) {
+      const api = useApi()
+      await api('/auth/register', {
+        method: 'POST',
+        body: { displayName, email, password },
+      })
+      // Register only creates the account (201). Log in right after, to get a token.
+      await this.login(email, password)
+    },
+
+    async fetchMe() {
+      const api = useApi()
+      this.user = await api<User>('/auth/me')
     },
 
     logout() {
-      this.userId = null
+      this.token = null
+      this.user = null
     },
   },
 

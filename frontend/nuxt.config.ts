@@ -37,6 +37,13 @@ export default defineNuxtConfig({
     },
   },
 
+  // Where the backend API runs. Can be overridden with the env var NUXT_PUBLIC_API_BASE.
+  runtimeConfig: {
+    public: {
+      apiBase: 'http://localhost:5289',
+    },
+  },
+
   svgo: {
     autoImportPath: './assets/icons/',
     defaultImport: 'componentext',

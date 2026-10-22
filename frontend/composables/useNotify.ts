@@ -11,6 +11,9 @@ export function useNotify() {
     error: (key: string, params?: Record<string, unknown>) => toast.error(t(key, params ?? {})),
     info: (key: string, params?: Record<string, unknown>) => toast.info(t(key, params ?? {})),
 
+    // A ready-made message (for example an error text that came from the API).
+    errorText: (message: string) => toast.error(message),
+
     // Returns true if the action succeeded; shows the right toast either way.
     result(result: ActionResult, successKey: string, params?: Record<string, unknown>) {
       if (result.ok) {

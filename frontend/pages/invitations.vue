@@ -90,7 +90,7 @@ function cancelMyRequest(teamId: number) {
           :text="tab === 'received' ? $t('invitations.noneReceivedText') : $t('invitations.noneSentText')"
         >
           <template #icon><SvgoInbox class="text-2xl" /></template>
-          <UiButton v-if="tab === 'sent'" to="/fields" size="sm">{{ $t('matches.book') }}</UiButton>
+          <UiButton v-if="tab === 'sent'" to="/matches/new" size="sm">{{ $t('matches.book') }}</UiButton>
         </UiEmptyState>
 
         <p class="mt-8 flex items-start gap-2 text-sm text-ink-400">

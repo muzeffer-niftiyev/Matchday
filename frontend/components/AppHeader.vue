@@ -14,11 +14,12 @@ const links = computed(() => [
   { to: '/', label: 'nav.home', exact: true },
   { to: '/matches', label: 'nav.matches' },
   { to: '/teams', label: 'nav.teams' },
-  { to: '/fields', label: 'nav.fields' },
 ])
 
 const route = useRoute()
-const isActive = (to: string, exact?: boolean) => (exact ? route.path === to : route.path.startsWith(to))
+const isBooking = computed(() => route.path === '/matches/new')
+const isActive = (to: string, exact?: boolean) =>
+  !isBooking.value && (exact ? route.path === to : route.path.startsWith(to))
 
 function logout() {
   menuOpen.value = false
@@ -49,6 +50,10 @@ function logout() {
       </nav>
 
       <div class="flex items-center gap-1">
+        <!-- Booking starts here (choose a field inside the wizard) -->
+        <UiButton v-if="!isBooking" to="/matches/new" size="sm" class="mr-1 hidden md:inline-flex">
+          <SvgoPlus class="text-base" /> {{ $t('matches.book') }}
+        </UiButton>
 
         <template v-if="auth.user">
           <NuxtLink

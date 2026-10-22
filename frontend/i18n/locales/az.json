@@ -28,7 +28,8 @@
     "admin": "Admin paneli",
     "logout": "Çıxış",
     "login": "Daxil ol",
-    "register": "Qeydiyyat"
+    "register": "Qeydiyyat",
+    "book": "Rezerv"
   },
   "footer": {
     "tagline": "Azərbaycanda 8-ə 8 futbol",
@@ -54,7 +55,8 @@
     "confirmPassword": "Şifrəni təkrarlayın",
     "registerButton": "Hesab yarat",
     "haveAccount": "Artıq hesabınız var?",
-    "registered": "Hesab yaradıldı, Matchday-ə xoş gəldiniz!"
+    "registered": "Hesab yaradıldı, Matchday-ə xoş gəldiniz!",
+    "wrongCredentials": "E-poçt və ya şifrə yanlışdır."
   },
   "validation": {
     "required": "Bu xana mütləqdir",
@@ -122,7 +124,7 @@
     "hello": "Salam, {name}",
     "heroTitle": "Növbəti oyununuz bir toxunuş uzaqlıqdadır",
     "heroText": "Meydança rezerv et, səkkiz oyunçunu seç və şəhərdəki istənilən komandaya çağırış göndər.",
-    "ctaBook": "Meydança rezerv et",
+    "ctaBook": "Oyun rezerv et",
     "ctaTeam": "Komanda yarat",
     "statTeams": "Komandalarım",
     "statUpcoming": "Qarşıdakı oyunlar",
@@ -142,7 +144,8 @@
     "noUpcomingText": "Meydança rezerv edin və başqa komandaya çağırış göndərin.",
     "latestResults": "Son nəticələr",
     "popularFields": "Meydançalar",
-    "statSquad": "Heyətim"
+    "statSquad": "Heyətim",
+    "bookNow": "Rezerv et"
   },
   "teams": {
     "owner": "Sahib",
@@ -242,7 +245,7 @@
   },
   "book": {
     "title": "Oyun rezerv et",
-    "subtitle": "Üç sadə addım və dəvətiniz yola düşür.",
+    "subtitle": "Meydança, vaxt, rəqib və heyət: beş sadə addım.",
     "missingTitle": "Əvvəlcə meydança və vaxt seçin",
     "missingText": "Rezervasiyaya başlamaq üçün meydançanı açın və boş vaxt seçin.",
     "noTeamTitle": "Hələ komandanız yoxdur",
@@ -262,7 +265,14 @@
     "send": "Dəvət göndər",
     "sent": "Dəvət {team} komandasına göndərildi!",
     "onlyCaptainTitle": "Yalnız kapitan rezerv edə bilər",
-    "onlyCaptainText": "Siz {team} komandasında oynayırsınız. Kapitanınızdan oyun rezerv etməsini xahiş edin."
+    "onlyCaptainText": "Siz {team} komandasında oynayırsınız. Kapitanınızdan oyun rezerv etməsini xahiş edin.",
+    "stepField": "Meydança",
+    "stepSlot": "Vaxt",
+    "chooseField": "Harada oynamaq istəyirsiniz?",
+    "chooseFieldText": "Meydança seçin. Hər oyun 8-ə 8, 90 dəqiqədir.",
+    "chooseSlot": "Gün və vaxt seçin",
+    "noFieldYet": "Meydança seçilməyib",
+    "noTimeYet": "Vaxt seçilməyib"
   },
   "matches": {
     "upcoming": "Qarşıdakı",
@@ -362,6 +372,7 @@
     "alreadyRequested": "Bu komandaya artıq sorğu göndərmisiniz.",
     "teamFull": "Bu komanda doludur.",
     "noRequest": "Bu komanda üçün sorğu yoxdur.",
-    "playerInOtherTeam": "Bu oyunçu artıq başqa komandaya qoşulub."
+    "playerInOtherTeam": "Bu oyunçu artıq başqa komandaya qoşulub.",
+    "network": "Serverə qoşulmaq mümkün olmadı. Bir az sonra yenidən cəhd edin."
   }
 }

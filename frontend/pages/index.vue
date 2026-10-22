@@ -49,7 +49,7 @@ const steps = [
         <h1 class="text-3xl font-bold leading-tight sm:text-4xl">{{ $t('home.heroTitle') }}</h1>
         <p class="mt-3 text-white/85 sm:text-lg">{{ $t('home.heroText') }}</p>
         <div class="mt-7 flex flex-wrap gap-3">
-          <UiButton to="/fields" variant="secondary" size="lg" class="!border-transparent">
+          <UiButton to="/matches/new" variant="secondary" size="lg" class="!border-transparent">
             <SvgoCalendar class="text-lg" /> {{ $t('home.ctaBook') }}
           </UiButton>
           <UiButton v-if="myTeam" :to="`/teams/${myTeam.id}`" size="lg" class="!bg-white/15 !shadow-none backdrop-blur hover:!bg-white/25">
@@ -114,7 +114,7 @@ const steps = [
           <MatchCard v-for="m in upcoming" :key="m.id" :match="m" />
         </div>
         <UiEmptyState v-else :title="$t('home.noUpcoming')" :text="$t('home.noUpcomingText')">
-          <UiButton to="/fields" size="sm">{{ $t('home.ctaBook') }}</UiButton>
+          <UiButton to="/matches/new" size="sm">{{ $t('home.ctaBook') }}</UiButton>
         </UiEmptyState>
       </section>
 
@@ -133,10 +133,10 @@ const steps = [
     <section>
       <div class="mb-4 flex items-center justify-between">
         <h2 class="section-title">{{ $t('home.popularFields') }}</h2>
-        <NuxtLink to="/fields" class="text-sm font-medium text-brand-600 hover:text-brand-700">{{ $t('common.seeAll') }}</NuxtLink>
+        <NuxtLink to="/matches/new" class="text-sm font-medium text-brand-600 hover:text-brand-700">{{ $t('home.bookNow') }}</NuxtLink>
       </div>
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <FieldCard v-for="f in data.fields.slice(0, 3)" :key="f.id" :field="f" />
+        <FieldCard v-for="f in data.fields.slice(0, 3)" :key="f.id" :field="f" :to="`/matches/new?fieldId=${f.id}`" />
       </div>
     </section>
   </div>

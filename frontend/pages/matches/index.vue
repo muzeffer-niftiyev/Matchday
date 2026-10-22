@@ -37,7 +37,7 @@ const tabs = computed(() => [
   <div class="container-page">
     <PageHeader :title="$t('nav.matches')" :subtitle="$t('matches.subtitle')">
       <template #actions>
-        <UiButton to="/fields"><SvgoPlus class="text-lg" /> {{ $t('matches.book') }}</UiButton>
+        <UiButton to="/matches/new"><SvgoPlus class="text-lg" /> {{ $t('matches.book') }}</UiButton>
       </template>
     </PageHeader>
 
@@ -62,7 +62,7 @@ const tabs = computed(() => [
       <MatchCard v-for="m in filtered" :key="m.id" :match="m" />
     </TransitionGroup>
     <UiEmptyState v-else :title="$t('matches.noneTitle')" :text="$t('matches.noneText')">
-      <UiButton to="/fields" size="sm">{{ $t('matches.book') }}</UiButton>
+      <UiButton to="/matches/new" size="sm">{{ $t('matches.book') }}</UiButton>
     </UiEmptyState>
   </div>
 </template>

@@ -1,14 +1,33 @@
 <script setup lang="ts">
 import type { Field } from '~/types'
 
-defineProps<{ field: Field }>()
+// A field card. Two ways to use it:
+//  - with `to`: a link (home page → starts booking with this field)
+//  - without `to`: a selectable button (booking wizard, step 1) that emits `select`
+const props = defineProps<{
+  field: Field
+  to?: string
+  selected?: boolean
+}>()
+
+const emit = defineEmits<{ select: [] }>()
 
 const { money } = useFormat()
+
+const NuxtLink = resolveComponent('NuxtLink')
+const tag = computed(() => (props.to ? NuxtLink : 'button'))
 </script>
 
 <template>
-  <NuxtLink :to="`/fields/${field.id}`" class="card card-hover group block overflow-hidden">
-    <div class="relative h-36 bg-gradient-to-br" :class="field.gradient">
+  <component
+    :is="tag"
+    :to="to"
+    :type="to ? undefined : 'button'"
+    class="card card-hover group block w-full overflow-hidden text-left"
+    :class="selected ? 'border-brand-400 ring-4 ring-brand-100' : ''"
+    @click="!to && emit('select')"
+  >
+    <div class="relative h-32 bg-gradient-to-br" :class="field.gradient">
       <!-- A simple pitch drawing instead of a photo -->
       <svg class="absolute inset-0 h-full w-full text-white/35" viewBox="0 0 200 100" preserveAspectRatio="none" fill="none" stroke="currentColor" stroke-width="1.2">
         <rect x="8" y="8" width="184" height="84" rx="3" />
@@ -20,7 +39,10 @@ const { money } = useFormat()
       <span class="chip absolute left-3 top-3 bg-white/90 text-ink-700 backdrop-blur">
         <SvgoLeaf class="text-sm" /> {{ $t(`grass.${field.grassType}`) }}
       </span>
-      <span class="chip absolute right-3 top-3 bg-ink-900/70 text-white backdrop-blur">8 × 8</span>
+      <span v-if="selected" class="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-white text-brand-600 shadow">
+        <SvgoCheck class="text-base" />
+      </span>
+      <span v-else class="chip absolute right-3 top-3 bg-ink-900/70 text-white backdrop-blur">8 × 8</span>
     </div>
     <div class="p-5">
       <div class="flex items-start justify-between gap-3">
@@ -36,5 +58,5 @@ const { money } = useFormat()
         </div>
       </div>
     </div>
-  </NuxtLink>
+  </component>
 </template>

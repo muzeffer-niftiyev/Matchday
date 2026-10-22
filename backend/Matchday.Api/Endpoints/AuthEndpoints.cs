@@ -44,7 +44,7 @@ public static class AuthEndpoints
                 return Results.Conflict("Bu e-poçt artıq qeydiyyatdan keçib.");
             }
 
-            return Results.Created($"/users/{user.Id}", new UserDto(user.Id, user.Email, user.DisplayName, user.CreatedAt));
+            return Results.Created($"/users/{user.Id}", new UserDto(user.Id, user.Email, user.DisplayName, user.CreatedAt, user.Role.ToString()));
         });
 
         group.MapPost("/login", async (LoginDto dto, MatchdayContext db, IPasswordHasher<User> hasher, TokenService tokens) =>
@@ -69,15 +69,24 @@ public static class AuthEndpoints
             return Results.Ok(new AuthResponseDto(token));
         });
 
-        group.MapGet("/me", (ClaimsPrincipal user) =>
+        group.MapGet("/me", async (ClaimsPrincipal user, MatchdayContext db) =>
         {
-            return Results.Ok(new
+            var userId = int.Parse(user.FindFirstValue("sub")!);
+            var foundUser = await db.Users.FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (foundUser is null)
             {
-                Id = user.FindFirstValue("sub"),
-                Email = user.FindFirstValue("email"),
-                Name = user.FindFirstValue("name"),
-                Role = user.FindFirstValue("role")
-            });
+                return Results.NotFound("İstifadəçi tapılmadı.");
+            }
+
+            return Results.Ok(new UserDto
+            (
+                foundUser.Id,
+                foundUser.Email,
+                foundUser.DisplayName,
+                foundUser.CreatedAt,
+                foundUser.Role.ToString()
+            ));
         }).RequireAuthorization();
     }
 }

@@ -32,9 +32,7 @@ function logout() {
 }
 
 function resetDemo() {
-  const userId = auth.userId
   data.resetDemo()
-  if (userId && !data.user(userId)) auth.loginAs(1)
   resetOpen.value = false
   notify.success('profile.resetDone')
 }

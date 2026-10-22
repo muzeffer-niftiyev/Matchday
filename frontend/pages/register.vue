@@ -8,7 +8,6 @@ const { t } = useI18n()
 useHead({ title: () => t('auth.registerTitle') })
 
 const auth = useAuthStore()
-const data = useDataStore()
 const notify = useNotify()
 const router = useRouter()
 
@@ -40,17 +39,18 @@ async function submit() {
   if (!(await v$.value.$validate())) return
 
   loading.value = true
-  await new Promise(r => setTimeout(r, 500))
-  const result = data.registerUser(form.displayName, form.email)
-  loading.value = false
-
-  if (!result.ok) {
-    notify.error(result.error)
-    return
+  try {
+    await auth.register(form.displayName, form.email, form.password)   // POST /auth/register, then log in
+    notify.success('auth.registered')
+    router.push('/')
   }
-  auth.loginAs(result.id!)
-  notify.success('auth.registered')
-  router.push('/')
+  catch (error) {
+    // e.g. 409 "Bu e-poçt artıq qeydiyyatdan keçib." or a validation message from the backend
+    notify.errorText(apiErrorMessage(error, t('errors.network')))
+  }
+  finally {
+    loading.value = false
+  }
 }
 </script>
 

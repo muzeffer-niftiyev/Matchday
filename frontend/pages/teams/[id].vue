@@ -112,7 +112,7 @@ function kick() {
 
           <div class="flex flex-wrap gap-2">
             <template v-if="isOwner">
-              <UiButton :to="canPlay ? '/fields' : undefined" :disabled="!canPlay"><SvgoSwords class="text-base" /> {{ $t('teams.challenge') }}</UiButton>
+              <UiButton :to="canPlay ? '/matches/new' : undefined" :disabled="!canPlay"><SvgoSwords class="text-base" /> {{ $t('teams.challenge') }}</UiButton>
               <UiButton variant="secondary" @click="editOpen = true"><SvgoEdit class="text-base" /> {{ $t('common.edit') }}</UiButton>
               <UiButton variant="ghost" class="!text-rose-600 hover:!bg-rose-50" @click="deleteOpen = true"><SvgoTrash class="text-base" /></UiButton>
             </template>

@@ -6,14 +6,16 @@ const auth = useAuthStore()
 const tabs = computed(() => [
   { to: '/', label: 'nav.home', icon: 'home', exact: true },
   { to: '/matches', label: 'nav.matches', icon: 'ball' },
+  { to: '/matches/new', label: 'nav.book', icon: 'plus' },
   { to: '/teams', label: 'nav.teams', icon: 'users' },
-  { to: '/fields', label: 'nav.fields', icon: 'field' },
   auth.isLoggedIn
     ? { to: '/invitations', label: 'nav.invitationsShort', icon: 'bell', badge: attentionCount.value }
     : { to: '/login', label: 'nav.login', icon: 'user' },
 ])
 
-const isActive = (to: string, exact?: boolean) => (exact ? route.path === to : route.path.startsWith(to))
+// /matches/new is the "book" tab, so it must not also light up the "matches" tab
+const isActive = (to: string, exact?: boolean) =>
+  exact || to === '/matches/new' ? route.path === to : route.path.startsWith(to) && route.path !== '/matches/new'
 </script>
 
 <template>
@@ -29,7 +31,7 @@ const isActive = (to: string, exact?: boolean) => (exact ? route.path === to : r
         <SvgoHome v-if="tab.icon === 'home'" class="text-xl" />
         <SvgoBall v-else-if="tab.icon === 'ball'" class="text-xl" />
         <SvgoUsers v-else-if="tab.icon === 'users'" class="text-xl" />
-        <SvgoField v-else-if="tab.icon === 'field'" class="text-xl" />
+        <span v-else-if="tab.icon === 'plus'" class="flex h-7 w-7 items-center justify-center rounded-full bg-brand-500 text-white shadow-sm shadow-brand-500/40"><SvgoPlus class="text-base" /></span>
         <SvgoBell v-else-if="tab.icon === 'bell'" class="text-xl" />
         <SvgoUser v-else class="text-xl" />
         {{ $t(tab.label) }}

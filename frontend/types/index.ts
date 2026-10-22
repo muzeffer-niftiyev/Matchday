@@ -5,11 +5,13 @@ export type TeamRole = 'Captain' | 'Player'
 export type GrassType = 'Natural' | 'Artificial'
 export type MatchStatus = 'Pending' | 'Confirmed' | 'Declined' | 'Expired' | 'Cancelled' | 'Completed'
 
+// The same shape as UserDto from GET /auth/me
 export interface User {
   id: number
   email: string
   displayName: string
   role: UserRole
+  createdAt?: string
 }
 
 export interface Team {

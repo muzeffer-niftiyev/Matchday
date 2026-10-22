@@ -34,17 +34,19 @@ async function submit() {
   if (!(await v$.value.$validate())) return
 
   loading.value = true
-  await new Promise(r => setTimeout(r, 500)) // pretend to call the API
-  auth.loginWithEmail(form.email)
-  loading.value = false
-  notify.success('auth.welcomeBack', { name: auth.user?.displayName ?? '' })
-  goNext()
-}
-
-function demo(userId: number) {
-  auth.loginAs(userId)
-  notify.success('auth.welcomeBack', { name: auth.user?.displayName ?? '' })
-  goNext()
+  try {
+    await auth.login(form.email, form.password)   // POST /auth/login, then GET /auth/me
+    notify.success('auth.welcomeBack', { name: auth.user?.displayName ?? '' })
+    goNext()
+  }
+  catch (error) {
+    // 401 has no body: the backend never says WHICH part was wrong (no user enumeration!)
+    const status = (error as { statusCode?: number }).statusCode
+    notify.errorText(status === 401 ? t('auth.wrongCredentials') : apiErrorMessage(error, t('errors.network')))
+  }
+  finally {
+    loading.value = false
+  }
 }
 </script>
 
@@ -62,15 +64,6 @@ function demo(userId: number) {
       </UiFormField>
       <UiButton type="submit" block size="lg" :loading="loading">{{ $t('auth.loginButton') }}</UiButton>
     </form>
-
-    <div class="my-6 flex items-center gap-3 text-xs text-ink-400">
-      <span class="h-px flex-1 bg-ink-200" /> {{ $t('auth.orDemo') }} <span class="h-px flex-1 bg-ink-200" />
-    </div>
-
-    <div class="grid grid-cols-2 gap-2">
-      <UiButton variant="secondary" @click="demo(1)"><SvgoUser class="text-base" /> {{ $t('auth.demoPlayer') }}</UiButton>
-      <UiButton variant="secondary" @click="demo(100)"><SvgoShield class="text-base" /> {{ $t('auth.demoAdmin') }}</UiButton>
-    </div>
 
     <p class="mt-8 text-center text-sm text-ink-500">
       {{ $t('auth.noAccount') }}

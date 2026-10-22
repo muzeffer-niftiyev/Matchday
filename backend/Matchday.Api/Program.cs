@@ -52,6 +52,12 @@ builder.Services
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy("Admin", policy => policy.RequireRole("Admin"));
 
+builder.Services.AddCors(options =>
+    options.AddDefaultPolicy(policy => policy
+        .WithOrigins("http://localhost:3000", "http://localhost:3001")
+        .AllowAnyHeader()
+        .AllowAnyMethod()));
+
 builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(allowIntegerValues: false)));
 
@@ -62,6 +68,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 

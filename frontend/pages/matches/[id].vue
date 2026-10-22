@@ -106,7 +106,7 @@ function saveScore() {
           <div class="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-ink-500">
             <span class="inline-flex items-center gap-1.5 capitalize"><SvgoCalendar class="text-base" /> {{ longDate(match.date) }}</span>
             <span class="inline-flex items-center gap-1.5"><SvgoClock class="text-base" /> {{ timeRange(match.startTime) }}</span>
-            <NuxtLink :to="`/fields/${field.id}`" class="inline-flex items-center gap-1.5 hover:text-brand-600"><SvgoPin class="text-base" /> {{ field.name }}, {{ field.city }}</NuxtLink>
+            <span class="inline-flex items-center gap-1.5"><SvgoPin class="text-base" /> {{ field.name }}, {{ field.city }}</span>
           </div>
         </div>
 

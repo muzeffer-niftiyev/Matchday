@@ -4,5 +4,6 @@ public record UserDto(
     int Id,
     string Email,
     string DisplayName,
-    DateTime CreatedAt
+    DateTime CreatedAt,
+    string Role
 );
