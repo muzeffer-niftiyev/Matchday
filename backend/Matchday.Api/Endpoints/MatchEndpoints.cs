@@ -397,7 +397,8 @@ public static class MatchEndpoints
                     m.Id,
                     m.Date,
                     m.StartTime,
-                    m.Status,
+                    // Lazy expiry: a Pending invitation older than 5h is shown as Expired
+                    m.Status == MatchStatus.Pending && m.ExpiresAt <= now ? MatchStatus.Expired : m.Status,
                     m.HomeTeamId,
                     m.HomeTeam!.Name,
                     m.AwayTeamId,

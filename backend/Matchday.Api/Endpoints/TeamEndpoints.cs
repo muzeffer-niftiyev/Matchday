@@ -93,6 +93,11 @@ public static class TeamEndpoints
 
             db.TeamMembers.Add(membership);
 
+            // Now I'm in a team, so my requests to other teams are no longer needed.
+            // Same save → same transaction as creating the team.
+            var myRequests = await db.JoinRequests.Where(r => r.UserId == userId).ToListAsync();
+            db.JoinRequests.RemoveRange(myRequests);
+
             try
             {
                 await db.SaveChangesAsync();
@@ -442,6 +447,8 @@ public static class TeamEndpoints
                 return Results.NotFound();
             }
 
+            var now = DateTime.UtcNow;
+
             var matches = await db.Matches
                .Where(m => m.HomeTeamId == id || m.AwayTeamId == id)
                .OrderByDescending(m => m.Date)
@@ -450,7 +457,8 @@ public static class TeamEndpoints
                    m.Id,
                    m.Date,
                    m.StartTime,
-                   m.Status,
+                   // Lazy expiry: a Pending invitation older than 5h is shown as Expired
+                   m.Status == MatchStatus.Pending && m.ExpiresAt <= now ? MatchStatus.Expired : m.Status,
                    m.HomeTeamId,
                    m.HomeTeam!.Name,
                    m.AwayTeamId,

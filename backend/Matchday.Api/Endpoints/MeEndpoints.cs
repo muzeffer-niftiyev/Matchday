@@ -68,5 +68,19 @@ public static class MeEndpoints
 
             return Results.Ok(team);
         });
+
+        group.MapGet("/join-requests", async (MatchdayContext db, ClaimsPrincipal user) =>
+        {
+            var userId = int.Parse(user.FindFirstValue("sub")!);
+
+            // r.Team inside Select is fine: EF turns it into a JOIN in SQL
+            var requests = await db.JoinRequests
+                .Where(r => r.UserId == userId)
+                .OrderByDescending(r => r.CreatedAt)
+                .Select(r => new MyJoinRequestDto(r.TeamId, r.Team!.Name, r.Team.City, r.Team.Color, r.CreatedAt))
+                .ToListAsync();
+
+            return Results.Ok(requests);
+        });
     }
 }
