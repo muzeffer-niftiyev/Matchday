@@ -59,7 +59,7 @@ const tabs = computed(() => [
     </div>
 
     <TransitionGroup v-if="filtered.length" tag="div" name="fade" class="grid grid-cols-1 gap-3 md:grid-cols-2">
-      <MatchCard v-for="m in filtered" :key="m.id" :match="m" />
+      <MatchCard v-for="m in filtered" :key="m.id" :match="data.toSummary(m)" />
     </TransitionGroup>
     <UiEmptyState v-else :title="$t('matches.noneTitle')" :text="$t('matches.noneText')">
       <UiButton to="/matches/new" size="sm">{{ $t('matches.book') }}</UiButton>

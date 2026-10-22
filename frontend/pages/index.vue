@@ -111,7 +111,7 @@ const steps = [
           <NuxtLink to="/matches" class="text-sm font-medium text-brand-600 hover:text-brand-700">{{ $t('common.seeAll') }}</NuxtLink>
         </div>
         <div v-if="upcoming.length" class="space-y-3">
-          <MatchCard v-for="m in upcoming" :key="m.id" :match="m" />
+          <MatchCard v-for="m in upcoming" :key="m.id" :match="data.toSummary(m)" />
         </div>
         <UiEmptyState v-else :title="$t('home.noUpcoming')" :text="$t('home.noUpcomingText')">
           <UiButton to="/matches/new" size="sm">{{ $t('home.ctaBook') }}</UiButton>
@@ -124,7 +124,7 @@ const steps = [
           <NuxtLink to="/matches?tab=results" class="text-sm font-medium text-brand-600 hover:text-brand-700">{{ $t('common.seeAll') }}</NuxtLink>
         </div>
         <div class="space-y-3">
-          <MatchCard v-for="m in results" :key="m.id" :match="m" />
+          <MatchCard v-for="m in results" :key="m.id" :match="data.toSummary(m)" />
         </div>
       </section>
     </div>

@@ -15,7 +15,16 @@ public static class TeamEndpoints
         group.MapGet("/", async (MatchdayContext db) =>
         {
             var teams = await db.Teams
-                .Select(t => new TeamDto(t.Id, t.Name, t.City, t.CreatedAt))
+                .Select(t => new TeamDto(
+                    t.Id,
+                    t.Name,
+                    t.City,
+                    t.Color,
+                    t.OwnerId,
+                    t.Owner!.DisplayName,
+                    db.TeamMembers.Count(m => m.TeamId == t.Id),
+                    t.CreatedAt
+                    ))
                 .ToListAsync();
 
             return Results.Ok(teams);
@@ -23,14 +32,26 @@ public static class TeamEndpoints
 
         group.MapGet("/{id:int}", async (int id, MatchdayContext db) =>
         {
-            var team = await db.Teams.FirstOrDefaultAsync(t => t.Id == id);
+            var team = await db.Teams
+                .Where(t => t.Id == id)
+                .Select(t => new TeamDto(
+                    t.Id,
+                    t.Name,
+                    t.City,
+                    t.Color,
+                    t.OwnerId,
+                    t.Owner!.DisplayName,
+                    db.TeamMembers.Count(m => m.TeamId == t.Id),
+                    t.CreatedAt
+                    ))
+                .FirstOrDefaultAsync();
 
             if (team is null)
             {
-                return Results.NotFound();
+                return Results.NotFound("Komanda tapılmadı.");
             }
 
-            return Results.Ok(new TeamDto(team.Id, team.Name, team.City, team.CreatedAt));
+            return Results.Ok(team);
         });
 
         group.MapPost("/", async (CreateTeamDto dto, MatchdayContext db, ClaimsPrincipal user) =>
@@ -56,7 +77,8 @@ public static class TeamEndpoints
                 Name = dto.Name,
                 City = dto.City,
                 CreatedAt = DateTime.UtcNow,
-                OwnerId = userId
+                OwnerId = userId,
+                Color = dto.Color
             };
 
             db.Teams.Add(team);
@@ -80,7 +102,17 @@ public static class TeamEndpoints
                 return Results.Conflict("Komanda yaradılmadı. Ad artıq tutulmuş ola bilər, ya da siz artıq komandadasınız.");
             }
 
-            return Results.Created($"/teams/{team.Id}", new TeamDto(team.Id, team.Name, team.City, team.CreatedAt));
+           
+            return Results.Created($"/teams/{team.Id}", new TeamDto(
+                    team.Id,
+                    team.Name,
+                    team.City,
+                    team.Color,
+                    team.OwnerId,
+                    user.FindFirstValue("name")!,
+                    1,
+                    team.CreatedAt
+                    ));
         }).RequireAuthorization();
 
         group.MapPut("/{id:int}", async (int id, CreateTeamDto dto, MatchdayContext db, ClaimsPrincipal user) =>
@@ -107,6 +139,7 @@ public static class TeamEndpoints
 
             team.Name = dto.Name;
             team.City = dto.City;
+            team.Color = dto.Color;
 
             try
             {
@@ -425,7 +458,10 @@ public static class TeamEndpoints
                    m.HomeScore,
                    m.AwayScore,
                    m.Field!.Name,
-                   m.Field.City))
+                   m.Field.City,
+                   m.HomeTeam!.Color,
+                   m.AwayTeam!.Color
+                   ))
                .ToListAsync();
 
             return Results.Ok(matches);

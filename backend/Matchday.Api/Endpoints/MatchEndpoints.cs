@@ -405,7 +405,10 @@ public static class MatchEndpoints
                     m.HomeScore,
                     m.AwayScore,
                     m.Field!.Name,
-                    m.Field.City))
+                    m.Field.City,
+                    m.HomeTeam!.Color,
+                    m.AwayTeam.Color
+                    ))
                 .ToListAsync();
 
             return Results.Ok(matches);

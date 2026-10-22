@@ -11,7 +11,7 @@ const { t } = useI18n()
 
 useHead({ title: () => t('nav.profile') })
 
-const myTeam = computed(() => data.teamOfUser(auth.userId!))
+const myTeam = computed(() => auth.team)
 const myRequests = computed(() => (myTeam.value ? [] : data.requestsOfUser(auth.userId!)))
 
 const myMatches = computed(() =>
@@ -50,7 +50,7 @@ function resetDemo() {
           <span v-if="auth.isAdmin" class="chip mt-3 bg-ink-900 text-white"><SvgoShield class="text-xs" /> {{ $t('profile.admin') }}</span>
 
           <div class="mt-6 grid grid-cols-3 gap-2 rounded-2xl bg-ink-50 p-3">
-            <div><p class="text-lg font-bold text-ink-900">{{ myTeam ? data.teamMembers(myTeam.id).length : '—' }}</p><p class="text-[11px] text-ink-500">{{ $t('profile.squad') }}</p></div>
+            <div><p class="text-lg font-bold text-ink-900">{{ myTeam ? myTeam.memberCount : '—' }}</p><p class="text-[11px] text-ink-500">{{ $t('profile.squad') }}</p></div>
             <div><p class="text-lg font-bold text-ink-900">{{ played }}</p><p class="text-[11px] text-ink-500">{{ $t('profile.played') }}</p></div>
             <div><p class="text-lg font-bold text-ink-900">{{ upcoming.length }}</p><p class="text-[11px] text-ink-500">{{ $t('profile.upcoming') }}</p></div>
           </div>
@@ -101,7 +101,7 @@ function resetDemo() {
         <section>
           <h2 class="section-title mb-4">{{ $t('profile.myMatches') }}</h2>
           <div v-if="myMatches.length" class="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <MatchCard v-for="m in myMatches.slice(0, 6)" :key="m.id" :match="m" />
+            <MatchCard v-for="m in myMatches.slice(0, 6)" :key="m.id" :match="data.toSummary(m)" />
           </div>
           <UiEmptyState v-else :title="$t('profile.noMatches')" />
         </section>

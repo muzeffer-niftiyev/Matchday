@@ -8,9 +8,9 @@ const props = defineProps<{ team: Team }>()
 const data = useDataStore()
 const auth = useAuthStore()
 
-const memberCount = computed(() => data.teamMembers(props.team.id).length)
-const owner = computed(() => data.user(props.team.ownerId))
-const isMine = computed(() => auth.userId !== null && data.isMember(props.team.id, auth.userId))
+// memberCount and ownerName come from the API (TeamDto), no lookups needed.
+// isMine comes from GET /me/team (auth store). requested still uses demo data until Slice 3.
+const isMine = computed(() => auth.team?.id === props.team.id)
 const isOwner = computed(() => props.team.ownerId === auth.userId)
 const requested = computed(() => auth.userId !== null && data.hasRequested(props.team.id, auth.userId))
 </script>
@@ -28,8 +28,8 @@ const requested = computed(() => auth.userId !== null && data.hasRequested(props
       </div>
       <p class="mt-1 flex items-center gap-1 text-sm text-ink-500"><SvgoPin class="text-sm" /> {{ team.city }}</p>
       <div class="mt-3 flex items-center gap-3 text-xs text-ink-500">
-        <span class="inline-flex items-center gap-1"><SvgoUsers class="text-sm" /> {{ $t('teams.squadSize', { n: memberCount, max: MAX_SQUAD_SIZE }) }}</span>
-        <span v-if="owner" class="hidden truncate sm:inline">{{ $t('teams.captain') }}: {{ owner.displayName }}</span>
+        <span class="inline-flex items-center gap-1"><SvgoUsers class="text-sm" /> {{ $t('teams.squadSize', { n: team.memberCount, max: MAX_SQUAD_SIZE }) }}</span>
+        <span v-if="team.ownerName" class="hidden truncate sm:inline">{{ $t('teams.captain') }}: {{ team.ownerName }}</span>
       </div>
     </div>
     <SvgoChevronRight class="text-lg text-ink-300 transition group-hover:translate-x-0.5 group-hover:text-ink-500" />

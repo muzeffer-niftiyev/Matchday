@@ -11,7 +11,7 @@ const router = useRouter()
 const loading = ref(false)
 
 // One team per player: you can only create a team if you're not in one.
-const myTeam = computed(() => data.teamOfUser(auth.userId!))
+const myTeam = computed(() => auth.team)
 const myRequestCount = computed(() => data.requestsOfUser(auth.userId!).length)
 
 async function create(value: { name: string; city: string; color: string }) {

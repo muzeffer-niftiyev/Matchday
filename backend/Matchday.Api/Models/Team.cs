@@ -8,4 +8,5 @@ public class Team
     public DateTime CreatedAt { get; set; }
     public int OwnerId { get; set; }
     public User? Owner { get; set; }
+    public required string Color { get; set; }
 }

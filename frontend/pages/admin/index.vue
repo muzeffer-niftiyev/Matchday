@@ -135,7 +135,7 @@ function deleteField() {
       <section>
         <h2 class="section-title mb-4">{{ $t('admin.recent') }}</h2>
         <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <MatchCard v-for="m in recentCompleted" :key="m.id" :match="m" />
+          <MatchCard v-for="m in recentCompleted" :key="m.id" :match="data.toSummary(m)" />
         </div>
       </section>
     </div>

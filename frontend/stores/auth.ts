@@ -1,14 +1,16 @@
 import { defineStore } from 'pinia'
-import type { User } from '~/types'
+import type { Team, User } from '~/types'
 
 // Real authentication against the backend:
 //   POST /auth/login    → { token }
 //   GET  /auth/me       → the current user (read from the database, so the role is always fresh)
+//   GET  /me/team       → the team I'm in (204 = no team)
 //   POST /auth/register → creates the user (then we log in)
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     token: null as string | null,
     user: null as User | null,
+    team: null as Team | null,
   }),
 
   getters: {
@@ -41,11 +43,20 @@ export const useAuthStore = defineStore('auth', {
     async fetchMe() {
       const api = useApi()
       this.user = await api<User>('/auth/me')
+      await this.fetchMyTeam()
+    },
+
+    // Call this again after creating, joining or leaving a team.
+    async fetchMyTeam() {
+      const api = useApi()
+      // 204 No Content has no body → $fetch gives undefined → null (no team)
+      this.team = (await api<Team | undefined>('/me/team')) ?? null
     },
 
     logout() {
       this.token = null
       this.user = null
+      this.team = null
     },
   },
 

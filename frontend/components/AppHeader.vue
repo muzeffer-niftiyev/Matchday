@@ -50,11 +50,6 @@ function logout() {
       </nav>
 
       <div class="flex items-center gap-1">
-        <!-- Booking starts here (choose a field inside the wizard) -->
-        <UiButton v-if="!isBooking" to="/matches/new" size="sm" class="mr-1 hidden md:inline-flex">
-          <SvgoPlus class="text-base" /> {{ $t('matches.book') }}
-        </UiButton>
-
         <template v-if="auth.user">
           <NuxtLink
             to="/invitations"
@@ -80,7 +75,6 @@ function logout() {
                 </div>
                 <div class="my-1 h-px bg-ink-100" />
                 <NuxtLink to="/profile" class="menu-item" @click="menuOpen = false"><SvgoUser /> {{ $t('nav.profile') }}</NuxtLink>
-                <NuxtLink to="/invitations" class="menu-item" @click="menuOpen = false"><SvgoInbox /> {{ $t('nav.invitations') }}</NuxtLink>
                 <NuxtLink v-if="auth.isAdmin" to="/admin" class="menu-item" @click="menuOpen = false"><SvgoShield /> {{ $t('nav.admin') }}</NuxtLink>
                 <div class="my-1 h-px bg-ink-100" />
                 <button class="menu-item w-full text-rose-600 hover:bg-rose-50" @click="logout"><SvgoLogout /> {{ $t('nav.logout') }}</button>

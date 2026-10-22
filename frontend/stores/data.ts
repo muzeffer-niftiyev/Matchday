@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { addHours, format } from 'date-fns'
 import { createDummyData } from '~/data/dummy'
-import type { Field, GrassType, JoinRequest, Match, Team, TeamMember, User } from '~/types'
+import type { Field, GrassType, JoinRequest, Match, MatchSummary, Team, TeamMember, User } from '~/types'
 import { INVITATION_EXPIRY_HOURS, MAX_SQUAD_SIZE, PLAYERS_PER_MATCH, SLOT_START_TIMES, slotEnd } from '~/utils/rules'
 
 // Result of an action: ok, or the i18n key of an error message (like the backend's 400/403/409 answers).
@@ -11,7 +11,8 @@ const ok = (id?: number): ActionResult => ({ ok: true, id })
 const fail = (error: string): ActionResult => ({ ok: false, error })
 
 export function matchStart(m: Pick<Match, 'date' | 'startTime'>) {
-  return new Date(`${m.date}T${m.startTime}:00`)
+  // slice(0, 5): demo data has "18:00", the API sends "18:00:00"
+  return new Date(`${m.date}T${m.startTime.slice(0, 5)}:00`)
 }
 
 export function matchEnd(m: Pick<Match, 'date' | 'startTime'>) {
@@ -62,6 +63,32 @@ export const useDataStore = defineStore('data', {
       return m => {
         const s = this.statusOf(m)
         return s === 'Pending' || s === 'Confirmed'
+      }
+    },
+
+    // Temporary: turns a demo Match into the API's MatchSummary shape, so MatchCard
+    // still works on pages that aren't connected to the API yet. Delete with the demo data.
+    toSummary(): (m: Match) => MatchSummary {
+      return m => {
+        const home = this.team(m.homeTeamId)
+        const away = this.team(m.awayTeamId)
+        const field = this.field(m.fieldId)
+        return {
+          id: m.id,
+          date: m.date,
+          startTime: m.startTime,
+          status: this.statusOf(m),
+          homeTeamId: m.homeTeamId,
+          homeTeamName: home?.name ?? '',
+          homeTeamColor: home?.color ?? '',
+          awayTeamId: m.awayTeamId,
+          awayTeamName: away?.name ?? '',
+          awayTeamColor: away?.color ?? '',
+          homeScore: m.homeScore,
+          awayScore: m.awayScore,
+          fieldName: field?.name ?? '',
+          fieldCity: field?.city ?? '',
+        }
       }
     },
 
@@ -310,14 +337,6 @@ export const useDataStore = defineStore('data', {
       m.awayScore = awayScore
       m.status = 'Completed'
       return ok(m.id)
-    },
-
-    registerUser(displayName: string, email: string): ActionResult {
-      if (this.users.some(u => u.email.toLowerCase() === email.trim().toLowerCase())) return fail('errors.emailTaken')
-
-      const id = Math.max(0, ...this.users.map(u => u.id)) + 1
-      this.users.push({ id, email: email.trim().toLowerCase(), displayName: displayName.trim(), role: 'User' })
-      return ok(id)
     },
 
     resetDemo() {

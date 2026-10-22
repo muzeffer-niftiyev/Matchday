@@ -14,5 +14,7 @@ public record MatchSummaryDto(
     int? HomeScore,
     int? AwayScore,
     string FieldName,
-    string FieldCity
+    string FieldCity,
+    string HomeTeamColor,
+    string AwayTeamColor
 );

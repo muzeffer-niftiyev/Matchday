@@ -20,7 +20,17 @@ export interface Team {
   city: string
   color: string
   ownerId: number
+  ownerName?: string
+  memberCount?: number
   createdAt: string
+}
+
+// GET /teams/{id}/members
+export interface TeamMemberDto {
+  userId: number
+  displayName: string
+  role: TeamRole
+  joinedAt: string
 }
 
 export interface TeamMember {
@@ -61,6 +71,24 @@ export interface Match {
   awayScore: number | null
   homeLineup: number[]
   awayLineup: number[]
+}
+
+// GET /teams/{id}/matches and GET /matches
+export interface MatchSummary {
+  id: number
+  date: string // yyyy-MM-dd
+  startTime: string // HH:mm:ss (C# TimeOnly)
+  status: MatchStatus
+  homeTeamId: number
+  homeTeamName: string
+  homeTeamColor: string
+  awayTeamId: number
+  awayTeamName: string
+  awayTeamColor: string
+  homeScore: number | null
+  awayScore: number | null
+  fieldName: string
+  fieldCity: string
 }
 
 export interface Slot {

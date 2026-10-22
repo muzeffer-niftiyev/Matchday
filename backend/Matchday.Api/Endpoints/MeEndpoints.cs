@@ -42,5 +42,31 @@ public static class MeEndpoints
 
             return Results.Ok(new MyInvitationsDto(received, sent));
         });
+
+        group.MapGet("/team", async (MatchdayContext db, ClaimsPrincipal user) =>
+        {
+            var userId = int.Parse(user.FindFirstValue("sub")!);
+            var teamMember = await db.TeamMembers.FirstOrDefaultAsync(m => m.UserId == userId);
+
+            if (teamMember is null)
+            {
+                return Results.NoContent();
+            }
+
+            var team = await db.Teams
+            .Where(t => t.Id == teamMember.TeamId)
+            .Select(t => new TeamDto(
+                t.Id,
+                t.Name,
+                t.City,
+                t.Color,
+                t.OwnerId,
+                t.Owner!.DisplayName,
+                db.TeamMembers.Count(m => m.TeamId == t.Id),
+                t.CreatedAt
+            )).FirstOrDefaultAsync();
+
+            return Results.Ok(team);
+        });
     }
 }
