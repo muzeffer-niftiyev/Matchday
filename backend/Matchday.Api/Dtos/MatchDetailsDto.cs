@@ -17,5 +17,10 @@ public record MatchDetailsDto(
     int? HomeScore,
     int? AwayScore,
     List<LineupPlayerDto> HomeLineup,
-    List<LineupPlayerDto> AwayLineup
+    List<LineupPlayerDto> AwayLineup,
+    string HomeTeamColor,
+    string AwayTeamColor,
+    int HomeTeamOwnerId,
+    int AwayTeamOwnerId,
+    DateTime ExpiresAt
 );

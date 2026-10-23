@@ -1,10 +1,14 @@
 <script setup lang="ts">
 definePageMeta({ middleware: 'auth' })
 
-const data = useDataStore()
+const api = useApi()
 const auth = useAuthStore()
+const inbox = useInboxStore()
 const notify = useNotify()
 const { myTeam, ownedTeam, received, sent, joinRequests, myRequests } = useInvitations()
+
+// Fresh numbers every time the page opens
+await inbox.refresh()
 const { niceDate, timeRange, relative } = useFormat()
 const { t } = useI18n()
 
@@ -33,8 +37,21 @@ watchEffect(() => {
 
 const matchList = computed(() => (tab.value === 'received' ? received.value : tab.value === 'sent' ? sent.value : []))
 
-function cancelMyRequest(teamId: number) {
-  notify.result(data.cancelRequest(teamId, auth.userId!), 'teams.requestCancelled')
+// DELETE /teams/{id}/join-requests
+async function cancelMyRequest(teamId: number) {
+  try {
+    await api(`/teams/${teamId}/join-requests`, { method: 'DELETE' })
+    await inbox.refresh()
+    notify.success('teams.requestCancelled')
+  }
+  catch (error) {
+    notify.errorText(apiErrorMessage(error, t('errors.network')))
+  }
+}
+
+// A join request was accepted: my squad grew
+async function onRequestHandled() {
+  await auth.fetchMyTeam()
 }
 </script>
 
@@ -56,25 +73,25 @@ function cancelMyRequest(teamId: number) {
         <TransitionGroup v-if="matchList.length" tag="div" name="fade" class="space-y-3">
           <NuxtLink
             v-for="m in matchList"
-            :key="m.id"
-            :to="`/matches/${m.id}`"
+            :key="m.matchId"
+            :to="`/matches/${m.matchId}`"
             class="card card-hover flex flex-col gap-4 p-5 sm:flex-row sm:items-center"
           >
             <div class="flex items-center gap-3">
-              <TeamBadge :team="data.team(tab === 'received' ? m.homeTeamId : m.awayTeamId)!" />
+              <TeamBadge :team="{ name: m.opponentTeamName, color: m.opponentTeamColor }" />
               <div class="min-w-0">
                 <p class="text-sm text-ink-500">
                   <template v-if="tab === 'received'">{{ $t('invitations.challengedBy') }}</template>
                   <template v-else>{{ $t('invitations.youChallenged') }}</template>
                 </p>
-                <p class="truncate font-semibold text-ink-900">{{ data.team(tab === 'received' ? m.homeTeamId : m.awayTeamId)?.name }}</p>
+                <p class="truncate font-semibold text-ink-900">{{ m.opponentTeamName }}</p>
               </div>
             </div>
 
             <div class="flex flex-1 flex-wrap gap-x-4 gap-y-1 text-sm text-ink-500 sm:justify-center">
               <span class="inline-flex items-center gap-1"><SvgoCalendar class="text-sm" /> {{ niceDate(m.date) }}</span>
               <span class="inline-flex items-center gap-1"><SvgoClock class="text-sm" /> {{ timeRange(m.startTime) }}</span>
-              <span class="inline-flex items-center gap-1"><SvgoPin class="text-sm" /> {{ data.field(m.fieldId)?.name }}</span>
+              <span class="inline-flex items-center gap-1"><SvgoPin class="text-sm" /> {{ m.fieldName }}</span>
             </div>
 
             <div class="flex items-center justify-between gap-3 sm:flex-col sm:items-end">
@@ -101,7 +118,7 @@ function cancelMyRequest(teamId: number) {
       <!-- Join requests to my team (captain) -->
       <template v-else-if="tab === 'joinRequests'">
         <div v-if="joinRequests.length" class="card divide-y divide-ink-100">
-          <JoinRequestRow v-for="r in joinRequests" :key="r.userId" :request="r" />
+          <JoinRequestRow v-for="r in joinRequests" :key="r.userId" :team-id="ownedTeam!.id" :request="r" @handled="onRequestHandled" />
         </div>
         <UiEmptyState v-else :title="$t('teams.requestsEmpty')" :text="$t('teams.requestsEmptyText')">
           <template #icon><SvgoUsers class="text-2xl" /></template>
@@ -114,9 +131,9 @@ function cancelMyRequest(teamId: number) {
         <p class="mb-5 text-sm text-ink-500">{{ $t('invitations.myRequestsText') }}</p>
         <div v-if="myRequests.length" class="card divide-y divide-ink-100">
           <div v-for="r in myRequests" :key="r.teamId" class="flex items-center gap-3 px-5 py-4">
-            <TeamBadge :team="data.team(r.teamId)!" size="sm" />
+            <TeamBadge :team="{ name: r.teamName, color: r.teamColor }" size="sm" />
             <div class="min-w-0 flex-1">
-              <NuxtLink :to="`/teams/${r.teamId}`" class="truncate font-medium text-ink-800 hover:text-brand-600">{{ data.team(r.teamId)?.name }}</NuxtLink>
+              <NuxtLink :to="`/teams/${r.teamId}`" class="truncate font-medium text-ink-800 hover:text-brand-600">{{ r.teamName }}</NuxtLink>
               <p class="text-xs text-ink-400">{{ $t('teams.requestedAgo', { time: relative(r.createdAt) }) }}</p>
             </div>
             <span class="chip hidden bg-amber-50 text-amber-700 sm:inline-flex"><SvgoClock class="text-xs" /> {{ $t('teams.requested') }}</span>

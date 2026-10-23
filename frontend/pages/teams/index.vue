@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { refDebounced } from "@vueuse/core";
-import { CITIES } from "~/utils/rules";
+import { citiesOf } from "~/utils/rules";
 import type { Team } from "~/types";
 
 const api = useApi();
@@ -50,7 +50,7 @@ const filteredTeams = computed(() =>
         </div>
         <select v-model="city" class="input w-auto">
           <option value="">{{ $t("common.allCities") }}</option>
-          <option v-for="c in CITIES" :key="c" :value="c">{{ c }}</option>
+          <option v-for="c in citiesOf(teams ?? [])" :key="c" :value="c">{{ c }}</option>
         </select>
       </div>
     </div>

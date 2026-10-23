@@ -7,7 +7,7 @@ export default <Partial<Config>>{
     './pages/**/*.vue',
     './app.vue',
     './composables/**/*.ts',
-    './data/**/*.ts',
+    './utils/**/*.ts',
     './stores/**/*.ts',
   ],
   theme: {

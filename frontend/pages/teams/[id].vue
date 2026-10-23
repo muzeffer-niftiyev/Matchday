@@ -1,27 +1,27 @@
 <script setup lang="ts">
-import { matchStart } from "~/stores/data";
-import { MAX_SQUAD_SIZE, PLAYERS_PER_MATCH } from "~/utils/rules";
+import { MAX_SQUAD_SIZE, PLAYERS_PER_MATCH, matchStart } from "~/utils/rules";
 import type { MatchSummary, Team, TeamMemberDto } from "~/types";
 
 const api = useApi();
 const route = useRoute();
 const router = useRouter();
-const data = useDataStore();
 const auth = useAuthStore();
+const inbox = useInboxStore();
 const notify = useNotify();
 const { relative } = useFormat();
 const { t } = useI18n();
 
 const teamId = computed(() => Number(route.params.id));
-const { data: team } = await useAsyncData(`team-${teamId.value}`, () =>
+const { data: team, refresh: refreshTeam } = await useAsyncData(`team-${teamId.value}`, () =>
   api<Team>(`/teams/${teamId.value}`),
 );
 
 useHead({ title: () => team.value?.name ?? t("nav.teams") });
 
 // GET /teams/{id}/members → [{ userId, displayName, role, joinedAt }]
-const { data: membersData } = await useAsyncData(`team-members-${teamId.value}`, () =>
-  api<TeamMemberDto[]>(`/teams/${teamId.value}/members`),
+const { data: membersData, refresh: refreshMembers } = await useAsyncData(
+  `team-members-${teamId.value}`,
+  () => api<TeamMemberDto[]>(`/teams/${teamId.value}/members`),
 );
 // null until the answer arrives (or if the team doesn't exist) → use an empty list instead
 const members = computed(() => membersData.value ?? []);
@@ -36,10 +36,10 @@ const myOtherTeam = computed(() => {
   if (!auth.userId || isMember.value) return undefined;
   return auth.team ?? undefined;
 });
-const hasRequested = computed(
-  () => auth.userId !== null && data.hasRequested(teamId.value, auth.userId),
-);
-const requests = computed(() => (isOwner.value ? data.requestsOfTeam(teamId.value) : []));
+// GET /me/join-requests (inbox store)
+const hasRequested = computed(() => inbox.myRequests.some((r) => r.teamId === teamId.value));
+// One team per owner, so "requests to my team" in the inbox are this team's requests
+const requests = computed(() => (isOwner.value ? inbox.teamRequests : []));
 
 // GET /teams/{id}/matches → newest first
 const { data: matchesData } = await useAsyncData(`team-matches-${teamId.value}`, () =>
@@ -79,50 +79,85 @@ const kickOpen = computed({
   set: (v) => !v && (kickTarget.value = null),
 });
 
-function requestToJoin() {
+// Every action: call the API, refresh what changed, show a toast.
+// On an error, the backend's Azerbaijani message is shown.
+async function run(action: () => Promise<unknown>) {
+  try {
+    await action();
+    return true;
+  } catch (error) {
+    notify.errorText(apiErrorMessage(error, t("errors.network")));
+    return false;
+  }
+}
+
+async function requestToJoin() {
   if (!auth.isLoggedIn) return router.push(`/login?redirect=${route.fullPath}`);
-  notify.result(data.requestToJoin(teamId.value, auth.userId!), "teams.requestSent", {
-    name: team.value?.name,
+  const ok = await run(async () => {
+    await api(`/teams/${teamId.value}/join-requests`, { method: "POST" });
+    await inbox.refresh();
   });
+  if (ok) notify.success("teams.requestSent", { name: team.value?.name });
 }
 
-function cancelRequest() {
-  notify.result(data.cancelRequest(teamId.value, auth.userId!), "teams.requestCancelled");
-}
-
-function leave() {
-  notify.result(data.leaveTeam(teamId.value, auth.userId!), "teams.left", {
-    name: team.value?.name,
+async function cancelRequest() {
+  const ok = await run(async () => {
+    await api(`/teams/${teamId.value}/join-requests`, { method: "DELETE" });
+    await inbox.refresh();
   });
+  if (ok) notify.success("teams.requestCancelled");
 }
 
-function save(value: { name: string; city: string; color: string }) {
-  if (
-    notify.result(
-      data.updateTeam(teamId.value, auth.userId!, value.name, value.city, value.color),
-      "teams.updated",
-    )
-  ) {
+async function leave() {
+  const name = team.value?.name;
+  const ok = await run(async () => {
+    await api(`/teams/${teamId.value}/leave`, { method: "DELETE" });
+    await Promise.all([refreshTeam(), refreshMembers(), auth.fetchMyTeam()]);
+    await inbox.refresh();
+  });
+  if (ok) notify.success("teams.left", { name });
+}
+
+async function save(value: { name: string; city: string; color: string }) {
+  const ok = await run(async () => {
+    // PUT returns 204 (no body), so load the team again to show the new values
+    await api(`/teams/${teamId.value}`, { method: "PUT", body: value });
+    await Promise.all([refreshTeam(), auth.fetchMyTeam()]);
+  });
+  if (ok) {
+    notify.success("teams.updated");
     editOpen.value = false;
   }
 }
 
-function remove() {
+async function remove() {
   const name = team.value?.name;
-  if (notify.result(data.deleteTeam(teamId.value, auth.userId!), "teams.deleted", { name })) {
+  const ok = await run(async () => {
+    await api(`/teams/${teamId.value}`, { method: "DELETE" });
+    await auth.fetchMyTeam();
+    await inbox.refresh();
+  });
+  deleteOpen.value = false;
+  if (ok) {
+    notify.success("teams.deleted", { name });
     router.push("/teams");
   }
 }
 
-function kick() {
+async function kick() {
   if (!kickTarget.value) return;
-  const name = kickTarget.value.name;
-  notify.result(
-    data.kickMember(teamId.value, auth.userId!, kickTarget.value.userId),
-    "teams.kicked",
-    { name },
-  );
+  const { userId, name } = kickTarget.value;
+  const ok = await run(async () => {
+    await api(`/teams/${teamId.value}/members/${userId}`, { method: "DELETE" });
+    await Promise.all([refreshTeam(), refreshMembers(), auth.fetchMyTeam()]);
+  });
   kickTarget.value = null;
+  if (ok) notify.success("teams.kicked", { name });
+}
+
+// A join request was accepted or declined (JoinRequestRow): the squad may have grown
+async function onRequestHandled() {
+  await Promise.all([refreshTeam(), refreshMembers(), auth.fetchMyTeam()]);
 }
 </script>
 
@@ -257,7 +292,13 @@ function kick() {
       <!-- Join requests (owner only) -->
       <div v-else-if="tab === 'requests'">
         <div v-if="requests.length" class="card divide-y divide-ink-100">
-          <JoinRequestRow v-for="r in requests" :key="r.userId" :request="r" />
+          <JoinRequestRow
+            v-for="r in requests"
+            :key="r.userId"
+            :team-id="teamId"
+            :request="r"
+            @handled="onRequestHandled"
+          />
         </div>
         <UiEmptyState
           v-else

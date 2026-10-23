@@ -8,7 +8,6 @@
         <span class="font-semibold text-ink-700">Matchday</span>
         <span>· {{ $t('footer.tagline') }}</span>
       </div>
-      <p>{{ $t('footer.demo') }}</p>
     </div>
   </footer>
 </template>

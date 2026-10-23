@@ -44,6 +44,7 @@ export const useAuthStore = defineStore('auth', {
       const api = useApi()
       this.user = await api<User>('/auth/me')
       await this.fetchMyTeam()
+      await useInboxStore().refresh()
     },
 
     // Call this again after creating, joining or leaving a team.
@@ -57,6 +58,7 @@ export const useAuthStore = defineStore('auth', {
       this.token = null
       this.user = null
       this.team = null
+      useInboxStore().clear()
     },
   },
 

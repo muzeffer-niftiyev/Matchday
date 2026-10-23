@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Field } from '~/types'
+import { fieldGradient } from '~/utils/rules'
 
 // A field card. Two ways to use it:
 //  - with `to`: a link (home page → starts booking with this field)
@@ -27,7 +28,7 @@ const tag = computed(() => (props.to ? NuxtLink : 'button'))
     :class="selected ? 'border-brand-400 ring-4 ring-brand-100' : ''"
     @click="!to && emit('select')"
   >
-    <div class="relative h-32 bg-gradient-to-br" :class="field.gradient">
+    <div class="relative h-32 bg-gradient-to-br" :class="fieldGradient(field.id)">
       <!-- A simple pitch drawing instead of a photo -->
       <svg class="absolute inset-0 h-full w-full text-white/35" viewBox="0 0 200 100" preserveAspectRatio="none" fill="none" stroke="currentColor" stroke-width="1.2">
         <rect x="8" y="8" width="184" height="84" rx="3" />
@@ -49,7 +50,7 @@ const tag = computed(() => (props.to ? NuxtLink : 'button'))
         <div class="min-w-0">
           <h3 class="truncate font-semibold text-ink-900 transition group-hover:text-brand-600">{{ field.name }}</h3>
           <p class="mt-1 flex items-center gap-1 truncate text-sm text-ink-500">
-            <SvgoPin class="text-sm" /> {{ field.city }} · {{ field.address }}
+            <SvgoPin class="text-sm" /> {{ field.city }}
           </p>
         </div>
         <div class="shrink-0 text-right">

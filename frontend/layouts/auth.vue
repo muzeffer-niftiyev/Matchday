@@ -8,18 +8,26 @@
         <rect x="120" y="30" width="160" height="80" />
         <rect x="120" y="490" width="160" height="80" />
       </svg>
-      <div class="relative flex h-full flex-col justify-between p-12 text-white">
+      <div class="relative flex h-full flex-col p-12 text-white">
         <NuxtLink to="/" class="flex items-center gap-2.5">
           <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur">
             <SvgoBall class="text-2xl" />
           </span>
           <span class="text-xl font-bold">Matchday</span>
         </NuxtLink>
-        <div>
-          <h2 class="max-w-md text-4xl font-bold leading-tight">{{ $t('auth.sideTitle') }}</h2>
-          <p class="mt-4 max-w-md text-lg text-white/80">{{ $t('auth.sideText') }}</p>
+        <!-- my-auto: vertically centered between the logo and the bottom -->
+        <div class="my-auto max-w-md">
+          <h2 class="text-4xl font-bold leading-tight">{{ $t('auth.sideTitle') }}</h2>
+          <p class="mt-4 text-lg text-white/85">{{ $t('auth.sideText') }}</p>
+          <ul class="mt-8 space-y-4">
+            <li v-for="n in 3" :key="n" class="flex items-start gap-3">
+              <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/20">
+                <SvgoCheck class="text-sm" />
+              </span>
+              <span class="text-white/90">{{ $t(`auth.sidePoint${n}`) }}</span>
+            </li>
+          </ul>
         </div>
-        <p class="text-sm text-white/60">8 × 8 · 90 dəq · Bakı</p>
       </div>
     </div>
 

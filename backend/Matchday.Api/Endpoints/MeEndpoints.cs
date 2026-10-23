@@ -27,7 +27,7 @@ public static class MeEndpoints
             .Where(m => myTeamIds.Contains(m.AwayTeamId))
             .OrderBy(m => m.ExpiresAt)
             .Select(m => new InvitationDto(
-                m.Id, m.Date, m.StartTime, m.Field!.Name, m.HomeTeamId, m.HomeTeam!.Name, m.CreatedAt, m.ExpiresAt
+                m.Id, m.Date, m.StartTime, m.Field!.Name, m.HomeTeamId, m.HomeTeam!.Name, m.CreatedAt, m.ExpiresAt, m.HomeTeam.Color
             ))
             .ToListAsync();
 
@@ -36,7 +36,7 @@ public static class MeEndpoints
             .Where(m => myTeamIds.Contains(m.HomeTeamId))
             .OrderBy(m => m.ExpiresAt)
             .Select(m => new InvitationDto(
-                m.Id, m.Date, m.StartTime, m.Field!.Name, m.AwayTeamId, m.AwayTeam!.Name, m.CreatedAt, m.ExpiresAt
+                m.Id, m.Date, m.StartTime, m.Field!.Name, m.AwayTeamId, m.AwayTeam!.Name, m.CreatedAt, m.ExpiresAt, m.AwayTeam.Color
             ))
             .ToListAsync();
 
@@ -81,6 +81,37 @@ public static class MeEndpoints
                 .ToListAsync();
 
             return Results.Ok(requests);
+        });
+
+        // Matches I'm in the lineup of (home or away), newest first
+        group.MapGet("/matches", async (MatchdayContext db, ClaimsPrincipal user) =>
+        {
+            var userId = int.Parse(user.FindFirstValue("sub")!);
+            var now = DateTime.UtcNow;
+
+            var matches = await db.Matches
+                .Where(m => db.MatchPlayers.Any(mp => mp.MatchId == m.Id && mp.UserId == userId))
+                .OrderByDescending(m => m.Date)
+                .ThenByDescending(m => m.StartTime)
+                .Select(m => new MatchSummaryDto(
+                    m.Id,
+                    m.Date,
+                    m.StartTime,
+                    // Lazy expiry: a Pending invitation older than 5h is shown as Expired
+                    m.Status == MatchStatus.Pending && m.ExpiresAt <= now ? MatchStatus.Expired : m.Status,
+                    m.HomeTeamId,
+                    m.HomeTeam!.Name,
+                    m.AwayTeamId,
+                    m.AwayTeam!.Name,
+                    m.HomeScore,
+                    m.AwayScore,
+                    m.Field!.Name,
+                    m.Field.City,
+                    m.HomeTeam.Color,
+                    m.AwayTeam.Color))
+                .ToListAsync();
+
+            return Results.Ok(matches);
         });
     }
 }

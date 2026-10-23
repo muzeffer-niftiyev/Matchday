@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Slot } from '~/types'
+import { hhmm } from '~/utils/rules'
 
 defineProps<{
   slots: Slot[]
@@ -27,8 +28,8 @@ const emit = defineEmits<{ select: [startTime: string] }>()
       ]"
       @click="emit('select', slot.startTime)"
     >
-      <span class="text-base font-semibold tabular-nums">{{ slot.startTime }}</span>
-      <span class="text-xs" :class="slot.isFree ? 'text-ink-400' : 'text-ink-300'">{{ $t('slots.until', { time: slot.endTime }) }}</span>
+      <span class="text-base font-semibold tabular-nums">{{ hhmm(slot.startTime) }}</span>
+      <span class="text-xs" :class="slot.isFree ? 'text-ink-400' : 'text-ink-300'">{{ $t('slots.until', { time: hhmm(slot.endTime) }) }}</span>
       <span
         class="absolute right-3 top-3 h-2 w-2 rounded-full"
         :class="slot.isFree ? 'bg-brand-400' : 'bg-ink-200'"

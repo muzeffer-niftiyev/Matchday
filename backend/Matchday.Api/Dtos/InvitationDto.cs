@@ -8,5 +8,6 @@ public record InvitationDto(
     int OpponentTeamId,
     string OpponentTeamName,
     DateTime CreatedAt,
-    DateTime ExpiresAt
+    DateTime ExpiresAt,
+    string OpponentTeamColor
 );

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { matchStart } from '~/stores/data'
+import type { MatchSummary } from '~/types'
 
-const data = useDataStore()
+const api = useApi()
 const auth = useAuthStore()
 const route = useRoute()
 const { t } = useI18n()
@@ -11,20 +11,21 @@ useHead({ title: () => t('nav.matches') })
 const tab = ref(typeof route.query.tab === 'string' ? route.query.tab : 'upcoming')
 const onlyMine = ref(false)
 
-const myTeamId = computed(() => (auth.userId ? data.teamOfUser(auth.userId)?.id : undefined))
+const myTeamId = computed(() => auth.team?.id)
 
-const filtered = computed(() => {
-  const now = new Date()
-  return data.matches
-    .filter(m => !onlyMine.value || m.homeTeamId === myTeamId.value || m.awayTeamId === myTeamId.value)
-    .filter((m) => {
-      const s = data.statusOf(m)
-      if (tab.value === 'upcoming') return (s === 'Confirmed' || s === 'Pending') && matchStart(m) > now
-      if (tab.value === 'results') return s === 'Completed'
-      return true
-    })
-    .sort((a, b) => (tab.value === 'upcoming' ? 1 : -1) * (matchStart(a).getTime() - matchStart(b).getTime()))
-})
+// GET /matches?when=upcoming|results&teamId=… : the backend filters and sorts.
+// "all" sends no `when`. Loads again when the tab or the switch changes.
+const { data: matches } = await useAsyncData(
+  'matches-list',
+  () => api<MatchSummary[]>('/matches', {
+    query: {
+      when: tab.value === 'all' ? undefined : tab.value,
+      teamId: onlyMine.value ? myTeamId.value : undefined,
+    },
+  }),
+  { watch: [tab, onlyMine] },
+)
+const filtered = computed(() => matches.value ?? [])
 
 const tabs = computed(() => [
   { value: 'upcoming', label: t('matches.upcoming') },
@@ -59,7 +60,7 @@ const tabs = computed(() => [
     </div>
 
     <TransitionGroup v-if="filtered.length" tag="div" name="fade" class="grid grid-cols-1 gap-3 md:grid-cols-2">
-      <MatchCard v-for="m in filtered" :key="m.id" :match="data.toSummary(m)" />
+      <MatchCard v-for="m in filtered" :key="m.id" :match="m" />
     </TransitionGroup>
     <UiEmptyState v-else :title="$t('matches.noneTitle')" :text="$t('matches.noneText')">
       <UiButton to="/matches/new" size="sm">{{ $t('matches.book') }}</UiButton>

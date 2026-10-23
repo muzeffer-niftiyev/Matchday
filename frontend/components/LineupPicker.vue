@@ -1,20 +1,18 @@
 <script setup lang="ts">
+import type { TeamMemberDto } from '~/types'
 import { PLAYERS_PER_MATCH } from '~/utils/rules'
 
 const props = defineProps<{
-  teamId: number
+  members: TeamMemberDto[] // GET /teams/{id}/members, loaded by the page
   blocked?: number[] // players already in the other lineup
 }>()
 
 const selected = defineModel<number[]>({ required: true })
 
-const data = useDataStore()
 const search = ref('')
 
 const players = computed(() =>
-  data.teamMembers(props.teamId)
-    .map(m => ({ ...m, user: data.user(m.userId)! }))
-    .filter(m => m.user.displayName.toLowerCase().includes(search.value.toLowerCase())),
+  props.members.filter(m => m.displayName.toLowerCase().includes(search.value.toLowerCase())),
 )
 
 const full = computed(() => selected.value.length >= PLAYERS_PER_MATCH)
@@ -63,9 +61,9 @@ function toggle(userId: number) {
           ]"
           @click="toggle(p.userId)"
         >
-          <UiAvatar :name="p.user.displayName" size="sm" />
+          <UiAvatar :name="p.displayName" size="sm" />
           <div class="min-w-0 flex-1">
-            <p class="truncate text-sm font-medium text-ink-800">{{ p.user.displayName }}</p>
+            <p class="truncate text-sm font-medium text-ink-800">{{ p.displayName }}</p>
             <p class="text-xs text-ink-400">
               <template v-if="blocked?.includes(p.userId)">{{ $t('lineup.inOtherTeam') }}</template>
               <template v-else>{{ $t(`roles.${p.role}`) }}</template>
@@ -80,7 +78,7 @@ function toggle(userId: number) {
         </button>
       </li>
     </ul>
-    <p v-if="players.length < PLAYERS_PER_MATCH && !search" class="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-700">
+    <p v-if="members.length < PLAYERS_PER_MATCH && !search" class="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-700">
       {{ $t('lineup.notEnough', { n: PLAYERS_PER_MATCH }) }}
     </p>
   </div>

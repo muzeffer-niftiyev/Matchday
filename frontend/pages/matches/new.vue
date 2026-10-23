@@ -2,14 +2,16 @@
 import VueDatePicker from '@vuepic/vue-datepicker'
 import { addDays, format, parseISO } from 'date-fns'
 import { az } from 'date-fns/locale'
-import { CITIES, PLAYERS_PER_MATCH } from '~/utils/rules'
+import { PLAYERS_PER_MATCH, citiesOf } from '~/utils/rules'
+import type { Field, MatchSummary, Slot, Team, TeamMemberDto } from '~/types'
 
 definePageMeta({ middleware: 'auth' })
 
+const api = useApi()
 const route = useRoute()
 const router = useRouter()
-const data = useDataStore()
 const auth = useAuthStore()
+const inbox = useInboxStore()
 const notify = useNotify()
 const { longDate, timeRange, money } = useFormat()
 const { t } = useI18n()
@@ -17,8 +19,15 @@ const { t } = useI18n()
 useHead({ title: () => t('book.title') })
 
 // One team per player: the home team is simply the team I own. Only its captain can book.
-const myTeam = computed(() => data.teamOfUser(auth.userId!))
-const homeTeam = computed(() => data.ownedTeam(auth.userId!))
+const myTeam = computed(() => auth.team ?? undefined)
+const homeTeam = computed(() => (auth.team && auth.team.ownerId === auth.userId ? auth.team : undefined))
+
+// GET /fields, GET /teams, and my squad for the lineup (GET /teams/{id}/members)
+const { data: allFields } = await useAsyncData('book-fields', () => api<Field[]>('/fields'))
+const { data: allTeams } = await useAsyncData('book-teams', () => api<Team[]>('/teams'))
+const { data: homeMembers } = await useAsyncData('book-home-members', () =>
+  homeTeam.value ? api<TeamMemberDto[]>(`/teams/${homeTeam.value.id}/members`) : Promise.resolve([]),
+)
 
 // ---------- The choices (the URL can pre-fill the field, e.g. from the home page) ----------
 const tomorrow = addDays(new Date(), 1)
@@ -28,8 +37,8 @@ const time = ref<string | null>(null)
 const awayTeamId = ref<number | null>(null)
 const lineup = ref<number[]>([])
 
-const field = computed(() => (fieldId.value ? data.field(fieldId.value) : undefined))
-const awayTeam = computed(() => (awayTeamId.value ? data.team(awayTeamId.value) : undefined))
+const field = computed(() => allFields.value?.find(f => f.id === fieldId.value))
+const awayTeam = computed(() => allTeams.value?.find(team => team.id === awayTeamId.value))
 
 // A different field or day means a different set of free slots.
 watch([fieldId, date], () => (time.value = null))
@@ -37,8 +46,9 @@ watch([fieldId, date], () => (time.value = null))
 // ---------- Step 1: field ----------
 const city = ref('')
 const grass = ref('')
+const cities = computed(() => citiesOf(allFields.value ?? []))
 const fields = computed(() =>
-  data.fields
+  (allFields.value ?? [])
     .filter(f => !city.value || f.city === city.value)
     .filter(f => !grass.value || f.grassType === grass.value)
     .sort((a, b) => a.name.localeCompare(b.name)),
@@ -64,13 +74,19 @@ const pickerDate = computed({
   },
 })
 
-const slots = computed(() => (fieldId.value ? data.slotsFor(fieldId.value, date.value) : []))
+// GET /fields/{id}/slots?date=… : loads again whenever the field or the day changes
+const { data: slotsData } = await useAsyncData(
+  'book-slots',
+  () => (fieldId.value ? api<Slot[]>(`/fields/${fieldId.value}/slots`, { query: { date: date.value } }) : Promise.resolve([])),
+  { watch: [fieldId, date] },
+)
+const slots = computed(() => slotsData.value ?? [])
 const freeCount = computed(() => slots.value.filter(s => s.isFree).length)
 
 // ---------- Step 3: opponent ----------
 const opponentSearch = ref('')
 const opponents = computed(() =>
-  data.teams
+  (allTeams.value ?? [])
     .filter(team => team.id !== homeTeam.value?.id)
     .filter(team => team.name.toLowerCase().includes(opponentSearch.value.toLowerCase())),
 )
@@ -101,21 +117,34 @@ function chooseField(id: number) {
   step.value = 2
 }
 
+const lineupNames = computed(() =>
+  lineup.value.map(id => homeMembers.value?.find(m => m.userId === id)?.displayName.split(' ')[0]).join(', '),
+)
+
+// POST /matches → 201 + the new match. The backend checks every rule (tomorrow+, free slot, 8 players...).
 async function submit() {
   loading.value = true
-  await new Promise(r => setTimeout(r, 600))
-  const result = data.bookMatch(auth.userId!, {
-    fieldId: fieldId.value!,
-    date: date.value,
-    startTime: time.value!,
-    homeTeamId: homeTeam.value!.id,
-    awayTeamId: awayTeamId.value!,
-    playerIds: lineup.value,
-  })
-  loading.value = false
-
-  if (notify.result(result, 'book.sent', { team: awayTeam.value?.name }) && result.ok) {
-    router.push(`/matches/${result.id}`)
+  try {
+    const match = await api<MatchSummary>('/matches', {
+      method: 'POST',
+      body: {
+        fieldId: fieldId.value,
+        date: date.value,
+        startTime: time.value, // "18:00:00", exactly as the slots endpoint sent it
+        homeTeamId: homeTeam.value!.id,
+        awayTeamId: awayTeamId.value,
+        playerIds: lineup.value,
+      },
+    })
+    notify.success('book.sent', { team: awayTeam.value?.name })
+    await inbox.refresh()
+    router.push(`/matches/${match.id}`)
+  }
+  catch (error) {
+    notify.errorText(apiErrorMessage(error, t('errors.network')))
+  }
+  finally {
+    loading.value = false
   }
 }
 </script>
@@ -171,7 +200,7 @@ async function submit() {
             <div class="mb-5 flex flex-wrap gap-2">
               <select v-model="city" class="input w-auto">
                 <option value="">{{ $t('common.allCities') }}</option>
-                <option v-for="c in CITIES" :key="c" :value="c">{{ c }}</option>
+                <option v-for="c in cities" :key="c" :value="c">{{ c }}</option>
               </select>
               <select v-model="grass" class="input w-auto">
                 <option value="">{{ $t('fields.anyGrass') }}</option>
@@ -262,7 +291,7 @@ async function submit() {
           <div v-else-if="step === 4">
             <h2 class="section-title mb-1">{{ $t('book.chooseLineup', { n: PLAYERS_PER_MATCH }) }}</h2>
             <p class="mb-5 text-sm text-ink-500">{{ $t('book.chooseLineupText') }}</p>
-            <LineupPicker v-model="lineup" :team-id="homeTeam.id" />
+            <LineupPicker v-model="lineup" :members="homeMembers ?? []" />
           </div>
 
           <!-- Step 5: review -->
@@ -284,7 +313,7 @@ async function submit() {
               <div class="flex justify-between"><dt class="text-ink-500">{{ $t('fields.time') }}</dt><dd class="font-medium">{{ timeRange(time) }}</dd></div>
               <div class="flex justify-between"><dt class="text-ink-500">{{ $t('fields.field') }}</dt><dd class="font-medium">{{ field.name }}, {{ field.city }}</dd></div>
               <div class="flex justify-between"><dt class="text-ink-500">{{ $t('fields.priceTotal') }}</dt><dd class="font-medium">{{ money(field.pricePerHour * 1.5) }}</dd></div>
-              <div class="flex justify-between gap-6"><dt class="shrink-0 text-ink-500">{{ $t('match.lineup') }}</dt><dd class="text-right font-medium">{{ lineup.map(id => data.user(id)?.displayName.split(' ')[0]).join(', ') }}</dd></div>
+              <div class="flex justify-between gap-6"><dt class="shrink-0 text-ink-500">{{ $t('match.lineup') }}</dt><dd class="text-right font-medium">{{ lineupNames }}</dd></div>
             </dl>
             <p class="mt-6 flex items-start gap-2 rounded-xl bg-brand-50 px-4 py-3 text-sm text-brand-800">
               <SvgoClock class="mt-0.5 text-base" /> {{ $t('book.expiryNote') }}

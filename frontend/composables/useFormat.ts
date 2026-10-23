@@ -1,7 +1,7 @@
 import { format, formatDistanceToNowStrict, isToday, isTomorrow, isYesterday, parseISO } from 'date-fns'
 import { az } from 'date-fns/locale'
 import moment from 'moment'
-import { slotEnd } from '~/utils/rules'
+import { hhmm, slotEnd } from '~/utils/rules'
 
 export function useFormat() {
   const { t } = useI18n()
@@ -20,8 +20,9 @@ export function useFormat() {
     return format(parseISO(date), 'EEEE, d MMMM yyyy', { locale: dfLocale.value })
   }
 
+  // "18:00 – 19:30" (accepts "18:00" or the API's "18:00:00")
   function timeRange(start: string) {
-    return `${start} – ${slotEnd(start)}`
+    return `${hhmm(start)} – ${slotEnd(hhmm(start))}`
   }
 
   function relative(iso: string) {

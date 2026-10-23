@@ -349,7 +349,12 @@ public static class MatchEndpoints
                 match.HomeScore,
                 match.AwayScore,
                 homeLineup,
-                awayLineup));
+                awayLineup,
+                match.HomeTeam.Color,
+                match.AwayTeam.Color,
+                match.HomeTeam.OwnerId,
+                match.AwayTeam.OwnerId,
+                match.ExpiresAt));
         });
 
         group.MapGet("/", async (string? when, int? teamId, string? city, MatchdayContext db) =>

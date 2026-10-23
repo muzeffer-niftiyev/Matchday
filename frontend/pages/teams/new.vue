@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import type { MyJoinRequest, Team } from '~/types'
+
 definePageMeta({ middleware: 'auth' })
 
 const { t } = useI18n()
 useHead({ title: () => t('teams.create') })
 
-const data = useDataStore()
+const api = useApi()
 const auth = useAuthStore()
 const notify = useNotify()
 const router = useRouter()
@@ -12,16 +14,29 @@ const loading = ref(false)
 
 // One team per player: you can only create a team if you're not in one.
 const myTeam = computed(() => auth.team)
-const myRequestCount = computed(() => data.requestsOfUser(auth.userId!).length)
+
+// Creating a team deletes my open join requests (the backend does it), so warn about them.
+const { data: myRequests } = await useAsyncData('my-join-requests', () => api<MyJoinRequest[]>('/me/join-requests'))
+const myRequestCount = computed(() => myRequests.value?.length ?? 0)
 
 async function create(value: { name: string; city: string; color: string }) {
   loading.value = true
-  await new Promise(r => setTimeout(r, 400))
-  const result = data.createTeam(auth.userId!, value.name, value.city, value.color)
-  loading.value = false
+  try {
+    // POST /teams → 201 + the new team (TeamDto)
+    const team = await api<Team>('/teams', { method: 'POST', body: value })
 
-  if (notify.result(result, 'teams.created', { name: value.name })) {
-    router.push(`/teams/${result.ok ? result.id : ''}`)
+    // I'm in a team now → refresh "my team"
+    await auth.fetchMyTeam()
+
+    notify.success('teams.created', { name: team.name })
+    router.push(`/teams/${team.id}`)
+  }
+  catch (error) {
+    // 409: name taken / already in a team, 400: validation → show the backend's message
+    notify.errorText(apiErrorMessage(error, t('errors.network')))
+  }
+  finally {
+    loading.value = false
   }
 }
 </script>

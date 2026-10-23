@@ -5,14 +5,14 @@ import { MAX_SQUAD_SIZE } from '~/utils/rules'
 
 const props = defineProps<{ team: Team }>()
 
-const data = useDataStore()
 const auth = useAuthStore()
+const inbox = useInboxStore()
 
 // memberCount and ownerName come from the API (TeamDto), no lookups needed.
-// isMine comes from GET /me/team (auth store). requested still uses demo data until Slice 3.
+// isMine: GET /me/team (auth store), requested: GET /me/join-requests (inbox store)
 const isMine = computed(() => auth.team?.id === props.team.id)
 const isOwner = computed(() => props.team.ownerId === auth.userId)
-const requested = computed(() => auth.userId !== null && data.hasRequested(props.team.id, auth.userId))
+const requested = computed(() => inbox.myRequests.some(r => r.teamId === props.team.id))
 </script>
 
 <template>

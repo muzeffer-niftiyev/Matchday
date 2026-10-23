@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import useVuelidate from '@vuelidate/core'
 import { between, helpers, maxLength, required } from '@vuelidate/validators'
-import { matchEnd } from '~/stores/data'
-import type { Field, GrassType } from '~/types'
-import { CITIES } from '~/utils/rules'
+import type { Field, GrassType, MatchSummary } from '~/types'
+import { CITIES, fieldGradient, hhmm, matchEnd } from '~/utils/rules'
 
 definePageMeta({ middleware: 'admin' })
 
-const data = useDataStore()
+const api = useApi()
 const notify = useNotify()
 const { money, niceDate } = useFormat()
 const { t } = useI18n()
@@ -16,22 +15,36 @@ useHead({ title: () => t('nav.admin') })
 
 const tab = ref('scores')
 
+// Shows the backend's message when a call fails; returns true on success
+async function run(action: () => Promise<unknown>) {
+  try {
+    await action()
+    return true
+  }
+  catch (error) {
+    notify.errorText(apiErrorMessage(error, t('errors.network')))
+    return false
+  }
+}
+
 // ---------- Scores ----------
+// GET /matches (all of them, newest first)
+const { data: matches, refresh: refreshMatches } = await useAsyncData('admin-matches', () => api<MatchSummary[]>('/matches'))
+
 const waitingForScore = computed(() =>
-  data.matches
+  (matches.value ?? [])
     .filter(m => m.status === 'Confirmed' && matchEnd(m) <= new Date())
     .sort((a, b) => matchEnd(a).getTime() - matchEnd(b).getTime()),
 )
-const recentCompleted = computed(() =>
-  data.matches
-    .filter(m => m.status === 'Completed')
-    .sort((a, b) => matchEnd(b).getTime() - matchEnd(a).getTime())
-    .slice(0, 6),
-)
+const recentCompleted = computed(() => (matches.value ?? []).filter(m => m.status === 'Completed').slice(0, 6))
+
+// GET /fields
+const { data: fieldsData, refresh: refreshFields } = await useAsyncData('admin-fields', () => api<Field[]>('/fields'))
+const fields = computed(() => fieldsData.value ?? [])
 
 const tabs = computed(() => [
   { value: 'scores', label: t('admin.scores'), count: waitingForScore.value.length },
-  { value: 'fields', label: t('admin.fields'), count: data.fields.length },
+  { value: 'fields', label: t('admin.fields'), count: fields.value.length },
 ])
 
 const scores = reactive<Record<number, { home: number | null; away: number | null }>>({})
@@ -41,10 +54,15 @@ watchEffect(() => {
   }
 })
 
-function saveScore(matchId: number) {
+// POST /matches/{id}/score
+async function saveScore(matchId: number) {
   const s = scores[matchId]
   if (s.home === null || s.away === null || s.home < 0 || s.away < 0) return notify.error('admin.scoreInvalid')
-  notify.result(data.setScore(matchId, s.home, s.away), 'match.scoreSaved')
+  const ok = await run(async () => {
+    await api(`/matches/${matchId}/score`, { method: 'POST', body: { homeScore: s.home, awayScore: s.away } })
+    await refreshMatches()
+  })
+  if (ok) notify.success('match.scoreSaved')
 }
 
 // ---------- Fields ----------
@@ -56,7 +74,6 @@ const form = reactive({
   id: undefined as number | undefined,
   name: '',
   city: 'Bakı',
-  address: '',
   grassType: 'Artificial' as GrassType,
   pricePerHour: 60,
 })
@@ -65,31 +82,45 @@ const form = reactive({
 const rules = computed(() => ({
   name: { required: helpers.withMessage(t('validation.required'), required), maxLength: helpers.withMessage(t('validation.maxLength', { n: 100 }), maxLength(100)) },
   city: { required: helpers.withMessage(t('validation.required'), required) },
-  address: { required: helpers.withMessage(t('validation.required'), required) },
   pricePerHour: { between: helpers.withMessage(t('validation.between', { min: 1, max: 10000 }), between(1, 10000)) },
 }))
 const v$ = useVuelidate(rules, form)
 
+// The city list: the usual ones plus any spelling already in the database
+const cityOptions = computed(() => [...new Set([...CITIES, ...fields.value.map(f => f.city)])])
+
 function openField(field?: Field) {
   Object.assign(form, field
-    ? { id: field.id, name: field.name, city: field.city, address: field.address, grassType: field.grassType, pricePerHour: field.pricePerHour }
-    : { id: undefined, name: '', city: 'Bakı', address: '', grassType: 'Artificial', pricePerHour: 60 })
+    ? { id: field.id, name: field.name, city: field.city, grassType: field.grassType, pricePerHour: field.pricePerHour }
+    : { id: undefined, name: '', city: 'Bakı', grassType: 'Artificial', pricePerHour: 60 })
   v$.value.$reset()
   fieldOpen.value = true
 }
 
+// POST /fields (new) or PUT /fields/{id} (edit)
 async function saveField() {
   if (!(await v$.value.$validate())) return
-  if (notify.result(data.saveField({ ...form }), form.id ? 'admin.fieldUpdated' : 'admin.fieldCreated', { name: form.name })) {
+  const { id, ...body } = form
+  const ok = await run(async () => {
+    await api(id ? `/fields/${id}` : '/fields', { method: id ? 'PUT' : 'POST', body })
+    await refreshFields()
+  })
+  if (ok) {
+    notify.success(id ? 'admin.fieldUpdated' : 'admin.fieldCreated', { name: form.name })
     fieldOpen.value = false
   }
 }
 
-function deleteField() {
+// DELETE /fields/{id}
+async function deleteField() {
   if (!deleteTarget.value) return
-  const name = deleteTarget.value.name
-  notify.result(data.deleteField(deleteTarget.value.id), 'admin.fieldDeleted', { name })
+  const { id, name } = deleteTarget.value
+  const ok = await run(async () => {
+    await api(`/fields/${id}`, { method: 'DELETE' })
+    await refreshFields()
+  })
   deleteTarget.value = null
+  if (ok) notify.success('admin.fieldDeleted', { name })
 }
 </script>
 
@@ -112,11 +143,11 @@ function deleteField() {
         <div v-if="waitingForScore.length" class="space-y-3">
           <div v-for="m in waitingForScore" :key="m.id" class="card flex flex-col gap-4 p-5 md:flex-row md:items-center">
             <div class="flex-1">
-              <p class="mb-2 text-xs text-ink-400">{{ niceDate(m.date) }} · {{ m.startTime }} · {{ data.field(m.fieldId)?.name }}</p>
+              <p class="mb-2 text-xs text-ink-400">{{ niceDate(m.date) }} · {{ hhmm(m.startTime) }} · {{ m.fieldName }}</p>
               <div class="flex items-center gap-2 text-sm font-semibold text-ink-800">
-                <TeamBadge :team="data.team(m.homeTeamId)!" size="sm" /> {{ data.team(m.homeTeamId)?.name }}
+                <TeamBadge :team="{ name: m.homeTeamName, color: m.homeTeamColor }" size="sm" /> {{ m.homeTeamName }}
                 <span class="text-ink-300">vs</span>
-                {{ data.team(m.awayTeamId)?.name }} <TeamBadge :team="data.team(m.awayTeamId)!" size="sm" />
+                {{ m.awayTeamName }} <TeamBadge :team="{ name: m.awayTeamName, color: m.awayTeamColor }" size="sm" />
               </div>
             </div>
             <div class="flex items-center gap-2">
@@ -135,7 +166,7 @@ function deleteField() {
       <section>
         <h2 class="section-title mb-4">{{ $t('admin.recent') }}</h2>
         <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <MatchCard v-for="m in recentCompleted" :key="m.id" :match="data.toSummary(m)" />
+          <MatchCard v-for="m in recentCompleted" :key="m.id" :match="m" />
         </div>
       </section>
     </div>
@@ -154,14 +185,11 @@ function deleteField() {
             </tr>
           </thead>
           <tbody class="divide-y divide-ink-100">
-            <tr v-for="f in data.fields" :key="f.id" class="transition hover:bg-ink-50/60">
+            <tr v-for="f in fields" :key="f.id" class="transition hover:bg-ink-50/60">
               <td class="px-5 py-3.5">
                 <div class="flex items-center gap-3">
-                  <span class="h-9 w-9 shrink-0 rounded-xl bg-gradient-to-br" :class="f.gradient" />
-                  <div>
-                    <p class="font-medium text-ink-900">{{ f.name }}</p>
-                    <p class="text-xs text-ink-400">{{ f.address }}</p>
-                  </div>
+                  <span class="h-9 w-9 shrink-0 rounded-xl bg-gradient-to-br" :class="fieldGradient(f.id)" />
+                  <p class="font-medium text-ink-900">{{ f.name }}</p>
                 </div>
               </td>
               <td class="px-5 py-3.5 text-ink-600">{{ f.city }}</td>
@@ -188,7 +216,7 @@ function deleteField() {
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <UiFormField :label="$t('admin.colCity')" :errors="v$.city.$errors">
             <select v-model="form.city" class="input">
-              <option v-for="c in CITIES" :key="c" :value="c">{{ c }}</option>
+              <option v-for="c in cityOptions" :key="c" :value="c">{{ c }}</option>
             </select>
           </UiFormField>
           <UiFormField :label="$t('admin.colSurface')">
@@ -198,9 +226,6 @@ function deleteField() {
             </select>
           </UiFormField>
         </div>
-        <UiFormField :label="$t('admin.address')" :errors="v$.address.$errors">
-          <input v-model="form.address" class="input" :class="{ 'input-error': v$.address.$error }" @blur="v$.address.$touch()">
-        </UiFormField>
         <UiFormField :label="$t('admin.colPrice')" :errors="v$.pricePerHour.$errors">
           <div class="relative">
             <input v-model.number="form.pricePerHour" type="number" min="1" class="input pr-16" :class="{ 'input-error': v$.pricePerHour.$error }" @blur="v$.pricePerHour.$touch()">

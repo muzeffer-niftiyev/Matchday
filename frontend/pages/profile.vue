@@ -1,40 +1,31 @@
 <script setup lang="ts">
-import { matchStart } from '~/stores/data'
+import { matchStart } from '~/utils/rules'
+import type { MatchSummary } from '~/types'
 
 definePageMeta({ middleware: 'auth' })
 
-const data = useDataStore()
+const api = useApi()
 const auth = useAuthStore()
 const notify = useNotify()
 const router = useRouter()
+const { myRequests } = useInvitations()
 const { t } = useI18n()
 
 useHead({ title: () => t('nav.profile') })
 
 const myTeam = computed(() => auth.team)
-const myRequests = computed(() => (myTeam.value ? [] : data.requestsOfUser(auth.userId!)))
 
-const myMatches = computed(() =>
-  data.matches
-    .filter(m => [...m.homeLineup, ...m.awayLineup].includes(auth.userId!))
-    .sort((a, b) => matchStart(b).getTime() - matchStart(a).getTime()),
-)
+// GET /me/matches → the matches I'm in the lineup of, newest first
+const { data: myMatchesData } = await useAsyncData('my-matches', () => api<MatchSummary[]>('/me/matches'))
+const myMatches = computed(() => myMatchesData.value ?? [])
 
 const played = computed(() => myMatches.value.filter(m => m.status === 'Completed').length)
-const upcoming = computed(() => myMatches.value.filter(m => data.statusOf(m) === 'Confirmed' && matchStart(m) > new Date()))
-
-const resetOpen = ref(false)
+const upcoming = computed(() => myMatches.value.filter(m => m.status === 'Confirmed' && matchStart(m) > new Date()))
 
 function logout() {
   auth.logout()
   notify.info('auth.loggedOut')
   router.push('/')
-}
-
-function resetDemo() {
-  data.resetDemo()
-  resetOpen.value = false
-  notify.success('profile.resetDone')
 }
 </script>
 
@@ -60,9 +51,6 @@ function resetDemo() {
           <NuxtLink v-if="auth.isAdmin" to="/admin" class="flex items-center gap-2 px-5 py-4 text-sm font-medium text-ink-700 transition hover:bg-ink-50">
             <SvgoShield class="text-base text-ink-400" /> {{ $t('nav.admin') }}
           </NuxtLink>
-          <button class="flex w-full items-center gap-2 px-5 py-4 text-sm font-medium text-ink-700 transition hover:bg-ink-50" @click="resetOpen = true">
-            <SvgoSettings class="text-base text-ink-400" /> {{ $t('profile.resetDemo') }}
-          </button>
           <button class="flex w-full items-center gap-2 px-5 py-4 text-sm font-medium text-rose-600 transition hover:bg-rose-50" @click="logout">
             <SvgoLogout class="text-base" /> {{ $t('nav.logout') }}
           </button>
@@ -91,8 +79,8 @@ function resetDemo() {
           </div>
           <div class="card divide-y divide-ink-100">
             <NuxtLink v-for="r in myRequests" :key="r.teamId" :to="`/teams/${r.teamId}`" class="flex items-center gap-3 px-5 py-3.5 transition hover:bg-ink-50">
-              <TeamBadge :team="data.team(r.teamId)!" size="sm" />
-              <span class="flex-1 truncate font-medium text-ink-800">{{ data.team(r.teamId)?.name }}</span>
+              <TeamBadge :team="{ name: r.teamName, color: r.teamColor }" size="sm" />
+              <span class="flex-1 truncate font-medium text-ink-800">{{ r.teamName }}</span>
               <span class="chip bg-amber-50 text-amber-700"><SvgoClock class="text-xs" /> {{ $t('teams.requested') }}</span>
             </NuxtLink>
           </div>
@@ -101,18 +89,11 @@ function resetDemo() {
         <section>
           <h2 class="section-title mb-4">{{ $t('profile.myMatches') }}</h2>
           <div v-if="myMatches.length" class="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <MatchCard v-for="m in myMatches.slice(0, 6)" :key="m.id" :match="data.toSummary(m)" />
+            <MatchCard v-for="m in myMatches.slice(0, 6)" :key="m.id" :match="m" />
           </div>
           <UiEmptyState v-else :title="$t('profile.noMatches')" />
         </section>
       </div>
     </div>
-
-    <UiModal v-model="resetOpen" :title="$t('profile.resetDemo')" :description="$t('profile.resetText')" size="sm">
-      <template #footer>
-        <UiButton variant="secondary" @click="resetOpen = false">{{ $t('common.cancel') }}</UiButton>
-        <UiButton @click="resetDemo">{{ $t('profile.resetConfirm') }}</UiButton>
-      </template>
-    </UiModal>
   </div>
 </template>
